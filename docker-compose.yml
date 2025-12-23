@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      target: runner
+    container_name: studevph_web_nextjs
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - studevph_network
+  nginx:
+    image: nginx:stable-alpine
+    container_name: studevph_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    networks:
+      - studevph_network
+
+networks:
+  studevph_network:
+    driver: bridge
