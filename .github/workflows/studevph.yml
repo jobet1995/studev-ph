@@ -50,6 +50,7 @@ jobs:
           elif [[ "$BRANCH" == "master" ]]; then
             echo "env_file=${{ secrets.PROD_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
 
   build:
     name: Build & Validate
