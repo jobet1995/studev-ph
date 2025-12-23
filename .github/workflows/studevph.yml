@@ -66,9 +66,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run ESLint
-        run: npx next lint
-
       - name: Run JSDoc Validation
         run: |
           npx eslint "pages/**/*.js" "components/**/*.js" "lib/**/*.js" \
