@@ -1,6 +1,26 @@
+/**
+ * @file                        :page.tsx
+ * @description                 :Home page component for the Next.js application.
+ * @author                      :Jobet P. Casquejo
+ * @last_modified_on            :12-23-20254
+ * @last_modified_by            :Jobet P. Casquejo
+ *
+ * ===========================================================================================
+ * Modifications Log
+ * Ver                    Date                    Author                  Modification
+ * 1.0                    12-23-20254             Jobet P. Casquejo       Initial Version
+ */
 import Image from "next/image";
 
-export default function Home() {
+/**
+ * Home page component.
+ *
+ * Renders the main landing page with instructions and links to Next.js templates,
+ * documentation, and deployment via Vercel.
+ *
+ * @returns {JSX.Element} The Home page layout component.
+ */
+export default function Home(): JSX.Element {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
