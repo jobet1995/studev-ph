@@ -8,7 +8,6 @@ on:
       - uat
       - production
       - master
-
   pull_request:
     branches:
       - development
@@ -27,6 +26,7 @@ jobs:
     outputs:
       env_file: ${{ steps.set-env.outputs.env_file }}
       tag: ${{ steps.set-env.outputs.tag }}
+      next_stage: ${{ steps.set-env.outputs.next_stage }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,19 +38,23 @@ jobs:
           if [[ "$BRANCH" == "development" ]]; then
             echo "env_file=${{ secrets.DEV_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=dev" >> $GITHUB_OUTPUT
+            echo "next_stage=qa" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "qa" ]]; then
             echo "env_file=${{ secrets.QA_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=qa" >> $GITHUB_OUTPUT
+            echo "next_stage=uat" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "uat" ]]; then
             echo "env_file=${{ secrets.UAT_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=uat" >> $GITHUB_OUTPUT
+            echo "next_stage=production" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "production" ]]; then
             echo "env_file=${{ secrets.PROD_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=prod" >> $GITHUB_OUTPUT
+            echo "next_stage=master" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "master" ]]; then
             echo "env_file=${{ secrets.PROD_ENV_FILE }}" >> $GITHUB_OUTPUT
             echo "tag=latest" >> $GITHUB_OUTPUT
-          fi
+            echo "next_stage=" >> $GITHUB_OUTPUT
 
   build:
     name: Build & Validate
@@ -96,7 +100,25 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker image
+      - name: Tag and Push Docker image
         run: |
           docker tag $IMAGE_NAME:${{ needs.set-env.outputs.tag }} ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ needs.set-env.outputs.tag }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ needs.set-env.outputs.tag }}
+
+  promote:
+    name: Promote Image to Next Stage
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.event_name == 'push' && needs.set-env.outputs.next_stage != ''
+    steps:
+      - name: Docker Login
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Promote Image
+        run: |
+          echo "Promoting $IMAGE_NAME:${{ needs.set-env.outputs.tag }} to stage ${{ needs.set-env.outputs.next_stage }}"
+          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ needs.set-env.outputs.tag }} ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ needs.set-env.outputs.next_stage }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$IMAGE_NAME:${{ needs.set-env.outputs.next_stage }}
