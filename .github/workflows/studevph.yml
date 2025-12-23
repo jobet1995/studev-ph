@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: studevph-app
+  IMAGE_NAME: studevph
   REGISTRY: docker.io
   COMPOSE_FILE: docker-compose.yml
 
