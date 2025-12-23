@@ -68,7 +68,7 @@ jobs:
 
       - name: Run JSDoc Validation
         run: |
-          npx eslint "pages/**/*.js" "components/**/*.js" "lib/**/*.js" \
+          npx eslint "**/*.{js,ts,jsx,tsx}" \
             --plugin jsdoc \
             --rule 'jsdoc/require-jsdoc: ["error", { "require": { "FunctionDeclaration": true, "MethodDefinition": true, "ClassDeclaration": true, "ArrowFunctionExpression": false }}]' \
             --rule 'jsdoc/require-param: "error"' \
