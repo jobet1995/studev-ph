@@ -48,6 +48,7 @@ jobs:
           elif [[ "$BRANCH" == "master" ]]; then
             echo "ENV_FILE=${{ secrets.PROD_ENV_FILE }}" >> $GITHUB_ENV
             echo "TAG=latest" >> $GITHUB_ENV
+          fi
 
       - name: Create .env file (runtime only)
         run: echo "$ENV_FILE" > .env
@@ -99,6 +100,7 @@ jobs:
           elif [[ "$BRANCH" == "master" ]]; then
             echo "ENV_FILE=${{ secrets.PROD_ENV_FILE }}" >> $GITHUB_ENV
             echo "TAG=latest" >> $GITHUB_ENV
+          fi
 
       - name: Create .env file (runtime only)
         run: echo "$ENV_FILE" > .env
