@@ -48,13 +48,13 @@ export const metadata: Metadata = {
  *
  * @param {Object} props - Component props.
  * @param {React.ReactNode} props.children - The page content to render inside the layout.
- * @returns {JSX.Element} The layout component wrapping children with HTML and body tags.
+ * @returns {React.ReactElement} The layout component wrapping children with HTML and body tags.
  */
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>): JSX.Element {
+}>): React.ReactElement {
   return (
     <html lang="en">
       <body
