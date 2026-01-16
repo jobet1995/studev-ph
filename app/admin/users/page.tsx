@@ -1,60 +1,35 @@
 "use client";
 
-
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-  lastActive?: string;
-}
-
-interface UsersData {
-  users: {
-    items: User[];
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    currentPage: number;
-  };
-}
-
-// GraphQL query to fetch users
-const GET_USERS = gql`
-  query GetUsers($pagination: PaginationInput) {
-    users(pagination: $pagination) {
-      items {
-        id
-        name
-        email
-        role
-        status
-        lastActive
-      }
-      totalCount
-      hasNextPage
-      hasPreviousPage
-      currentPage
-    }
-  }
-`;
+import { getUsersFromFirebase, User } from '../../../lib/firebase/userOperations';
 
 /**
  * Admin users management page
  * @returns {JSX.Element} Admin users page
  */
 export default function AdminUsersPage() {
-  const { data, loading, error } = useQuery<UsersData>(GET_USERS, {
-    variables: {
-      pagination: { page: 1, limit: 10 }
-    }
-  });
-  const users = data?.users.items || [];
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        const result = await getUsersFromFirebase(1, 10);
+        setUsers(result.items);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load users');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   if (loading) {
     return (
@@ -69,7 +44,7 @@ export default function AdminUsersPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-6 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Users</h2>
-          <p className="text-gray-600">{error.message}</p>
+          <p className="text-gray-600">{error}</p>
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
