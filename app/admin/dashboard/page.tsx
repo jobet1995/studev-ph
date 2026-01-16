@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useQuery } from '@apollo/client/react';
 import { gql } from '@apollo/client';
@@ -159,11 +158,8 @@ const GET_DASHBOARD_DATA = gql`
  * @returns {JSX.Element} The admin dashboard page
  */
 const DashboardPage = () => {
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [engagements, setEngagements] = useState<Engagement[]>([]);
-  const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
-  const [featuredBlogs, setFeaturedBlogs] = useState<FeaturedBlog[]>([]);
+  // Use GraphQL to fetch dashboard data
+  const { data, loading, error } = useQuery<GetDashboardDataQuery>(GET_DASHBOARD_DATA);
   
   // Define type for stats
   type Stat = {
@@ -174,145 +170,91 @@ const DashboardPage = () => {
     changeType: 'positive' | 'negative' | 'neutral';
   };
   
-  // Stats for the summary cards
-  const [stats, setStats] = useState<Stat[]>([
+  // Stats for the summary cards - derived from GraphQL data
+  const stats: Stat[] = data ? [
+    { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
+    { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
+    { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
+    { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
+  ] : [
     { id: 1, name: 'Active Members', value: '...', change: '', changeType: 'neutral' },
     { id: 2, name: 'Volunteers', value: '...', change: '', changeType: 'neutral' },
     { id: 3, name: 'Pending Tasks', value: '...', change: '', changeType: 'neutral' },
     { id: 4, name: 'Community Impact', value: '...', change: '', changeType: 'neutral' },
-  ]);
-
-  // This function is now replaced by GraphQL query via useQuery hook
-  // The data will be fetched automatically by the useQuery hook
+  ];
   
-  // Use GraphQL to fetch dashboard data
-  const { data, loading, error } = useQuery<GetDashboardDataQuery>(GET_DASHBOARD_DATA);
+  // Activities derived from GraphQL data
+  const activities: Activity[] = data ? data.recentActivity.map((activity) => ({
+    id: activity.id,
+    user: activity.title,
+    action: activity.action,
+    target: activity.type,
+    time: activity.timestamp,
+    avatar: 'https://placehold.co/40x40?text=U' // Default avatar
+  })) : [];
   
-  // Update state when data is loaded
-  useEffect(() => {
-    if (data) {
-      // Update stats
-      if (stats.some((stat, index) => {
-        const newValue = index === 0 ? data.dashboardStats.totalBlogs.toString() :
-                    index === 1 ? data.dashboardStats.publishedBlogs.toString() :
-                    index === 2 ? data.dashboardStats.totalEvents.toString() :
-                    data.dashboardStats.totalPosts.toString();
-        return stat.value !== newValue;
-      })) {
-        setStats([
-          { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
-          { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
-          { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
-          { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
-        ]);
-      }
-      
-      // Update activities if needed
-      const newActivities = data.recentActivity.map((activity) => ({
-        id: activity.id,
-        user: activity.title,
-        action: activity.action,
-        target: activity.type,
-        time: activity.timestamp,
-        avatar: 'https://placehold.co/40x40?text=U' // Default avatar
-      }));
-      
-      if (activities.length !== newActivities.length || 
-          newActivities.some((newAct, index) => 
-            activities[index]?.id !== newAct.id || 
-            activities[index]?.user !== newAct.user)) {
-        setActivities(newActivities);
-      }
-      
-      // Update events if needed
-      const newEvents = data.upcomingEvents.map((event) => ({
-        id: event.id,
-        title: event.title,
-        date: event.date,
-        time: '', // No time in GraphQL schema, set as empty
-        location: event.location,
-        eventType: event.eventType,
-        attendees: 0 // No attendees in GraphQL response, default to 0
-      }));
-      
-      if (events.length !== newEvents.length || 
-          newEvents.some((newEvt, index) => 
-            events[index]?.id !== newEvt.id || 
-            events[index]?.title !== newEvt.title)) {
-        setEvents(newEvents);
-      }
-      
-      // Update pipeline if needed
-      const newPipeline = data.posts.items.map((post, index) => ({
-        id: post.id,
-        title: post.title,
-        stage: 'Published',
-        value: index + 10, // Some arbitrary value
-        owner: post.author,
-        deadline: post.createdAt
-      }));
-      
-      if (pipeline.length !== newPipeline.length || 
-          newPipeline.some((newItem, index) => 
-            pipeline[index]?.id !== newItem.id || 
-            pipeline[index]?.title !== newItem.title)) {
-        setPipeline(newPipeline);
-      }
-      
-      // Update engagements if needed
-      const newEngagements = [
-        {
-          id: '1',
-          type: 'Blog Engagement',
-          metric: 'Total Blogs',
-          value: data.dashboardStats.totalBlogs,
-          change: 0
-        },
-        {
-          id: '2',
-          type: 'Event Engagement',
-          metric: 'Total Events',
-          value: data.dashboardStats.totalEvents,
-          change: 0
-        },
-        {
-          id: '3',
-          type: 'Post Engagement',
-          metric: 'Total Posts',
-          value: data.dashboardStats.totalPosts,
-          change: 0
-        },
-        {
-          id: '4',
-          type: 'User Engagement',
-          metric: 'Total Users',
-          value: data.dashboardStats.totalUsers,
-          change: 0
-        }
-      ];
-      
-      if (engagements.some((eng, index) => eng.value !== newEngagements[index].value)) {
-        setEngagements(newEngagements);
-      }
-      
-      // Update featured blogs if needed
-      const newBlogs = data.featuredBlogs.map(blog => ({
-        id: blog.id,
-        title: blog.title,
-        author: blog.author,
-        date: blog.date,
-        excerpt: blog.excerpt,
-        imageUrl: blog.imageUrl
-      }));
-      
-      if (featuredBlogs.length !== newBlogs.length || 
-          newBlogs.some((newBlog, index) => 
-            featuredBlogs[index]?.id !== newBlog.id || 
-            featuredBlogs[index]?.title !== newBlog.title)) {
-        setFeaturedBlogs(newBlogs);
-      }
+  // Events derived from GraphQL data
+  const events: Event[] = data ? data.upcomingEvents.map((event) => ({
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    time: '', // No time in GraphQL schema, set as empty
+    location: event.location,
+    eventType: event.eventType,
+    attendees: 0 // No attendees in GraphQL response, default to 0
+  })) : [];
+  
+  // Pipeline derived from GraphQL data
+  const pipeline: PipelineItem[] = data ? data.posts.items.map((post, index) => ({
+    id: post.id,
+    title: post.title,
+    stage: 'Published',
+    value: index + 10, // Some arbitrary value
+    owner: post.author,
+    deadline: post.createdAt
+  })) : [];
+  
+  // Engagements derived from GraphQL data
+  const engagements: Engagement[] = data ? [
+    {
+      id: '1',
+      type: 'Blog Engagement',
+      metric: 'Total Blogs',
+      value: data.dashboardStats.totalBlogs,
+      change: 0
+    },
+    {
+      id: '2',
+      type: 'Event Engagement',
+      metric: 'Total Events',
+      value: data.dashboardStats.totalEvents,
+      change: 0
+    },
+    {
+      id: '3',
+      type: 'Post Engagement',
+      metric: 'Total Posts',
+      value: data.dashboardStats.totalPosts,
+      change: 0
+    },
+    {
+      id: '4',
+      type: 'User Engagement',
+      metric: 'Total Users',
+      value: data.dashboardStats.totalUsers,
+      change: 0
     }
-  }, [data, stats, activities, events, engagements, pipeline, featuredBlogs]);
+  ] : [];
+  
+  // Featured blogs derived from GraphQL data
+  const featuredBlogs: FeaturedBlog[] = data ? data.featuredBlogs.map(blog => ({
+    id: blog.id,
+    title: blog.title,
+    author: blog.author,
+    date: blog.date,
+    excerpt: blog.excerpt,
+    imageUrl: blog.imageUrl
+  })) : [];
 
 
 

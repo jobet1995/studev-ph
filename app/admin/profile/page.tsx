@@ -41,6 +41,8 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+
+  
   useEffect(() => {
     // In a real application, fetch user profile data from an API
     const fetchUserProfile = async () => {
@@ -87,16 +89,32 @@ const ProfilePage = () => {
   }, []);
   
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    position: '',
-    role: '',
-    bio: '',
-    timezone: 'Asia/Manila',
-    language: 'en',
-    avatar: null,
+  const [formData, setFormData] = useState<FormData>(() => {
+    // Initialize form data based on user profile if available
+    if (userProfile) {
+      return {
+        firstName: userProfile.firstName || '',
+        lastName: userProfile.lastName || '',
+        email: userProfile.email || '',
+        position: userProfile.position || '',
+        role: userProfile.role || '',
+        bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Manila',
+        language: userProfile.language || 'en',
+        avatar: null,
+      };
+    }
+    return {
+      firstName: '',
+      lastName: '',
+      email: '',
+      position: '',
+      role: '',
+      bio: '',
+      timezone: 'Asia/Manila',
+      language: 'en',
+      avatar: null,
+    };
   });
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
 
@@ -125,39 +143,7 @@ const ProfilePage = () => {
     }
   };
 
-  // Populate form when data loads
-  useEffect(() => {
-    if (userProfile && !isEditing) {
-      // Check if the new values differ from current state to avoid unnecessary updates
-      const newFormData = {
-        ...formData,
-        firstName: userProfile.firstName || '',
-        lastName: userProfile.lastName || '',
-        email: userProfile.email || '',
-        position: userProfile.position || '',
-        role: userProfile.role || '',
-        bio: userProfile.bio || '',
-        timezone: userProfile.timezone || 'Asia/Manila',
-        language: userProfile.language || 'en',
-        avatar: null
-      };
-      
-      // Compare values to see if update is needed
-      const hasChanges = 
-        formData.firstName !== newFormData.firstName ||
-        formData.lastName !== newFormData.lastName ||
-        formData.email !== newFormData.email ||
-        formData.position !== newFormData.position ||
-        formData.role !== newFormData.role ||
-        formData.bio !== newFormData.bio ||
-        formData.timezone !== newFormData.timezone ||
-        formData.language !== newFormData.language;
-      
-      if (hasChanges) {
-        setFormData(newFormData);
-      }
-    }
-  }, [userProfile, isEditing, formData]);
+  
   
   // Clean up object URLs when component unmounts
   useEffect(() => {
