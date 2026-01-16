@@ -128,18 +128,34 @@ const ProfilePage = () => {
   // Populate form when data loads
   useEffect(() => {
     if (userProfile && !isEditing) {
-      setFormData(prevFormData => ({
-        ...prevFormData,
-        firstName: userProfile.firstName || '',
-        lastName: userProfile.lastName || '',
-        email: userProfile.email || '',
-        position: userProfile.position || '',
-        role: userProfile.role || '',
-        bio: userProfile.bio || '',
-        timezone: userProfile.timezone || 'Asia/Manila',
-        language: userProfile.language || 'en',
-        avatar: null
-      }));
+      setFormData(prevFormData => {
+        // Check if the new values differ from current state to avoid unnecessary updates
+        const newFormData = {
+          ...prevFormData,
+          firstName: userProfile.firstName || '',
+          lastName: userProfile.lastName || '',
+          email: userProfile.email || '',
+          position: userProfile.position || '',
+          role: userProfile.role || '',
+          bio: userProfile.bio || '',
+          timezone: userProfile.timezone || 'Asia/Manila',
+          language: userProfile.language || 'en',
+          avatar: null
+        };
+        
+        // Compare values to see if update is needed
+        const hasChanges = 
+          prevFormData.firstName !== newFormData.firstName ||
+          prevFormData.lastName !== newFormData.lastName ||
+          prevFormData.email !== newFormData.email ||
+          prevFormData.position !== newFormData.position ||
+          prevFormData.role !== newFormData.role ||
+          prevFormData.bio !== newFormData.bio ||
+          prevFormData.timezone !== newFormData.timezone ||
+          prevFormData.language !== newFormData.language;
+        
+        return hasChanges ? newFormData : prevFormData;
+      });
     }
   }, [userProfile, isEditing]);
   

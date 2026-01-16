@@ -33,15 +33,6 @@ interface PipelineItem {
   deadline: string;
 }
 
-interface Blog {
-  id: string;
-  title: string;
-  author: string;
-  date: string;
-  excerpt: string;
-  imageUrl: string;
-}
-
 interface Event {
   id: string;
   title: string;
@@ -172,6 +163,7 @@ const DashboardPage = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [engagements, setEngagements] = useState<Engagement[]>([]);
   const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
+  const [featuredBlogs, setFeaturedBlogs] = useState<FeaturedBlog[]>([]);
   
   // Define type for stats
   type Stat = {
@@ -200,75 +192,151 @@ const DashboardPage = () => {
   useEffect(() => {
     if (data) {
       // Map GraphQL data to local state
-      setStats([
-        { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
-        { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
-        { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
-        { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
-      ]);
+      setStats(prevStats => {
+        const newStats = [
+          { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
+          { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
+          { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
+          { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
+        ];
+        
+        // Only update if the values have changed
+        const hasChanges = prevStats.some((stat, index) => 
+          stat.value !== newStats[index].value
+        );
+        
+        return hasChanges ? newStats : prevStats;
+      });
       
       // Map recent activities
-      setActivities(data.recentActivity.map((activity) => ({
-        id: activity.id,
-        user: activity.title,
-        action: activity.action,
-        target: activity.type,
-        time: activity.timestamp,
-        avatar: 'https://placehold.co/40x40?text=U' // Default avatar
-      })));
+      setActivities(prevActivities => {
+        const newActivities = data.recentActivity.map((activity) => ({
+          id: activity.id,
+          user: activity.title,
+          action: activity.action,
+          target: activity.type,
+          time: activity.timestamp,
+          avatar: 'https://placehold.co/40x40?text=U' // Default avatar
+        }));
+        
+        // Only update if there are changes
+        if (prevActivities.length !== newActivities.length) return newActivities;
+        
+        const hasChanges = newActivities.some((newAct, index) => 
+          prevActivities[index]?.id !== newAct.id || 
+          prevActivities[index]?.user !== newAct.user
+        );
+        
+        return hasChanges ? newActivities : prevActivities;
+      });
       
       // Map events
-      setEvents(data.upcomingEvents.map((event) => ({
-        id: event.id,
-        title: event.title,
-        date: event.date,
-        time: '', // No time in GraphQL schema, set as empty
-        location: event.location,
-        eventType: event.eventType,
-        attendees: 0 // No attendees in GraphQL response, default to 0
-      })));
+      setEvents(prevEvents => {
+        const newEvents = data.upcomingEvents.map((event) => ({
+          id: event.id,
+          title: event.title,
+          date: event.date,
+          time: '', // No time in GraphQL schema, set as empty
+          location: event.location,
+          eventType: event.eventType,
+          attendees: 0 // No attendees in GraphQL response, default to 0
+        }));
+        
+        // Only update if there are changes
+        if (prevEvents.length !== newEvents.length) return newEvents;
+        
+        const hasChanges = newEvents.some((newEvt, index) => 
+          prevEvents[index]?.id !== newEvt.id || 
+          prevEvents[index]?.title !== newEvt.title
+        );
+        
+        return hasChanges ? newEvents : prevEvents;
+      });
       
       // Map posts for pipeline section (similar to how events are handled)
-      setPipeline(data.posts.items.map((post, index) => ({
-        id: post.id,
-        title: post.title,
-        stage: 'Published',
-        value: index + 10, // Some arbitrary value
-        owner: post.author,
-        deadline: post.createdAt
-      })));
+      setPipeline(prevPipeline => {
+        const newPipeline = data.posts.items.map((post, index) => ({
+          id: post.id,
+          title: post.title,
+          stage: 'Published',
+          value: index + 10, // Some arbitrary value
+          owner: post.author,
+          deadline: post.createdAt
+        }));
+        
+        // Only update if there are changes
+        if (prevPipeline.length !== newPipeline.length) return newPipeline;
+        
+        const hasChanges = newPipeline.some((newItem, index) => 
+          prevPipeline[index]?.id !== newItem.id || 
+          prevPipeline[index]?.title !== newItem.title
+        );
+        
+        return hasChanges ? newPipeline : prevPipeline;
+      });
       
       // Set engagements based on stats
-      setEngagements([
-        {
-          id: '1',
-          type: 'Blog Engagement',
-          metric: 'Total Blogs',
-          value: data.dashboardStats.totalBlogs,
-          change: 0
-        },
-        {
-          id: '2',
-          type: 'Event Engagement',
-          metric: 'Total Events',
-          value: data.dashboardStats.totalEvents,
-          change: 0
-        },
-        {
-          id: '3',
-          type: 'Post Engagement',
-          metric: 'Total Posts',
-          value: data.dashboardStats.totalPosts,
-          change: 0
-        },
-        {
-          id: '4',
-          type: 'User Engagement',
-          metric: 'Total Users',
-          value: data.dashboardStats.totalUsers,
-          change: 0
-        }
-      ]);
+      setEngagements(prevEngagements => {
+        const newEngagements = [
+          {
+            id: '1',
+            type: 'Blog Engagement',
+            metric: 'Total Blogs',
+            value: data.dashboardStats.totalBlogs,
+            change: 0
+          },
+          {
+            id: '2',
+            type: 'Event Engagement',
+            metric: 'Total Events',
+            value: data.dashboardStats.totalEvents,
+            change: 0
+          },
+          {
+            id: '3',
+            type: 'Post Engagement',
+            metric: 'Total Posts',
+            value: data.dashboardStats.totalPosts,
+            change: 0
+          },
+          {
+            id: '4',
+            type: 'User Engagement',
+            metric: 'Total Users',
+            value: data.dashboardStats.totalUsers,
+            change: 0
+          }
+        ];
+        
+        // Only update if there are changes
+        const hasChanges = newEngagements.some((newEng, index) => 
+          prevEngagements[index]?.value !== newEng.value
+        );
+        
+        return hasChanges ? newEngagements : prevEngagements;
+      });
+      
+      // Set featured blogs
+      setFeaturedBlogs(prevBlogs => {
+        const newBlogs = data.featuredBlogs.map(blog => ({
+          id: blog.id,
+          title: blog.title,
+          author: blog.author,
+          date: blog.date,
+          excerpt: blog.excerpt,
+          imageUrl: blog.imageUrl
+        }));
+        
+        // Only update if there are changes
+        if (prevBlogs.length !== newBlogs.length) return newBlogs;
+        
+        const hasChanges = newBlogs.some((newBlog, index) => 
+          prevBlogs[index]?.id !== newBlog.id || 
+          prevBlogs[index]?.title !== newBlog.title
+        );
+        
+        return hasChanges ? newBlogs : prevBlogs;
+      });
     }
   }, [data]);
 
@@ -479,7 +547,53 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Postings Section */}
+          {/* Featured Blogs Section */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Featured Blogs</h2>
+                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                  View All
+                </button>
+              </div>
+            </div>
+            <div className="divide-y divide-gray-200">
+              {featuredBlogs.length > 0 ? (
+                featuredBlogs.map((blog) => (
+                  <div key={blog.id} className="p-6 hover:bg-gray-50">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden mr-4">
+                        <img 
+                          src={blog.imageUrl || 'https://placehold.co/80x80?text=Blog'} 
+                          alt={blog.title}
+                          className="w-full h-full object-cover"
+                          width={80}
+                          height={80}
+                        />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">{blog.title}</h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          By {blog.author} • {new Date(blog.date).toLocaleDateString()}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                          {blog.excerpt}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  No featured blogs
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Postings Section */}
+        <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-200">
               <div className="flex items-center justify-between">
