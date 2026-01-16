@@ -191,154 +191,128 @@ const DashboardPage = () => {
   // Update state when data is loaded
   useEffect(() => {
     if (data) {
-      // Map GraphQL data to local state
-      setStats(prevStats => {
-        const newStats = [
+      // Update stats
+      if (stats.some((stat, index) => {
+        const newValue = index === 0 ? data.dashboardStats.totalBlogs.toString() :
+                    index === 1 ? data.dashboardStats.publishedBlogs.toString() :
+                    index === 2 ? data.dashboardStats.totalEvents.toString() :
+                    data.dashboardStats.totalPosts.toString();
+        return stat.value !== newValue;
+      })) {
+        setStats([
           { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
           { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
           { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
           { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
-        ];
-        
-        // Only update if the values have changed
-        const hasChanges = prevStats.some((stat, index) => 
-          stat.value !== newStats[index].value
-        );
-        
-        return hasChanges ? newStats : prevStats;
-      });
+        ]);
+      }
       
-      // Map recent activities
-      setActivities(prevActivities => {
-        const newActivities = data.recentActivity.map((activity) => ({
-          id: activity.id,
-          user: activity.title,
-          action: activity.action,
-          target: activity.type,
-          time: activity.timestamp,
-          avatar: 'https://placehold.co/40x40?text=U' // Default avatar
-        }));
-        
-        // Only update if there are changes
-        if (prevActivities.length !== newActivities.length) return newActivities;
-        
-        const hasChanges = newActivities.some((newAct, index) => 
-          prevActivities[index]?.id !== newAct.id || 
-          prevActivities[index]?.user !== newAct.user
-        );
-        
-        return hasChanges ? newActivities : prevActivities;
-      });
+      // Update activities if needed
+      const newActivities = data.recentActivity.map((activity) => ({
+        id: activity.id,
+        user: activity.title,
+        action: activity.action,
+        target: activity.type,
+        time: activity.timestamp,
+        avatar: 'https://placehold.co/40x40?text=U' // Default avatar
+      }));
       
-      // Map events
-      setEvents(prevEvents => {
-        const newEvents = data.upcomingEvents.map((event) => ({
-          id: event.id,
-          title: event.title,
-          date: event.date,
-          time: '', // No time in GraphQL schema, set as empty
-          location: event.location,
-          eventType: event.eventType,
-          attendees: 0 // No attendees in GraphQL response, default to 0
-        }));
-        
-        // Only update if there are changes
-        if (prevEvents.length !== newEvents.length) return newEvents;
-        
-        const hasChanges = newEvents.some((newEvt, index) => 
-          prevEvents[index]?.id !== newEvt.id || 
-          prevEvents[index]?.title !== newEvt.title
-        );
-        
-        return hasChanges ? newEvents : prevEvents;
-      });
+      if (activities.length !== newActivities.length || 
+          newActivities.some((newAct, index) => 
+            activities[index]?.id !== newAct.id || 
+            activities[index]?.user !== newAct.user)) {
+        setActivities(newActivities);
+      }
       
-      // Map posts for pipeline section (similar to how events are handled)
-      setPipeline(prevPipeline => {
-        const newPipeline = data.posts.items.map((post, index) => ({
-          id: post.id,
-          title: post.title,
-          stage: 'Published',
-          value: index + 10, // Some arbitrary value
-          owner: post.author,
-          deadline: post.createdAt
-        }));
-        
-        // Only update if there are changes
-        if (prevPipeline.length !== newPipeline.length) return newPipeline;
-        
-        const hasChanges = newPipeline.some((newItem, index) => 
-          prevPipeline[index]?.id !== newItem.id || 
-          prevPipeline[index]?.title !== newItem.title
-        );
-        
-        return hasChanges ? newPipeline : prevPipeline;
-      });
+      // Update events if needed
+      const newEvents = data.upcomingEvents.map((event) => ({
+        id: event.id,
+        title: event.title,
+        date: event.date,
+        time: '', // No time in GraphQL schema, set as empty
+        location: event.location,
+        eventType: event.eventType,
+        attendees: 0 // No attendees in GraphQL response, default to 0
+      }));
       
-      // Set engagements based on stats
-      setEngagements(prevEngagements => {
-        const newEngagements = [
-          {
-            id: '1',
-            type: 'Blog Engagement',
-            metric: 'Total Blogs',
-            value: data.dashboardStats.totalBlogs,
-            change: 0
-          },
-          {
-            id: '2',
-            type: 'Event Engagement',
-            metric: 'Total Events',
-            value: data.dashboardStats.totalEvents,
-            change: 0
-          },
-          {
-            id: '3',
-            type: 'Post Engagement',
-            metric: 'Total Posts',
-            value: data.dashboardStats.totalPosts,
-            change: 0
-          },
-          {
-            id: '4',
-            type: 'User Engagement',
-            metric: 'Total Users',
-            value: data.dashboardStats.totalUsers,
-            change: 0
-          }
-        ];
-        
-        // Only update if there are changes
-        const hasChanges = newEngagements.some((newEng, index) => 
-          prevEngagements[index]?.value !== newEng.value
-        );
-        
-        return hasChanges ? newEngagements : prevEngagements;
-      });
+      if (events.length !== newEvents.length || 
+          newEvents.some((newEvt, index) => 
+            events[index]?.id !== newEvt.id || 
+            events[index]?.title !== newEvt.title)) {
+        setEvents(newEvents);
+      }
       
-      // Set featured blogs
-      setFeaturedBlogs(prevBlogs => {
-        const newBlogs = data.featuredBlogs.map(blog => ({
-          id: blog.id,
-          title: blog.title,
-          author: blog.author,
-          date: blog.date,
-          excerpt: blog.excerpt,
-          imageUrl: blog.imageUrl
-        }));
-        
-        // Only update if there are changes
-        if (prevBlogs.length !== newBlogs.length) return newBlogs;
-        
-        const hasChanges = newBlogs.some((newBlog, index) => 
-          prevBlogs[index]?.id !== newBlog.id || 
-          prevBlogs[index]?.title !== newBlog.title
-        );
-        
-        return hasChanges ? newBlogs : prevBlogs;
-      });
+      // Update pipeline if needed
+      const newPipeline = data.posts.items.map((post, index) => ({
+        id: post.id,
+        title: post.title,
+        stage: 'Published',
+        value: index + 10, // Some arbitrary value
+        owner: post.author,
+        deadline: post.createdAt
+      }));
+      
+      if (pipeline.length !== newPipeline.length || 
+          newPipeline.some((newItem, index) => 
+            pipeline[index]?.id !== newItem.id || 
+            pipeline[index]?.title !== newItem.title)) {
+        setPipeline(newPipeline);
+      }
+      
+      // Update engagements if needed
+      const newEngagements = [
+        {
+          id: '1',
+          type: 'Blog Engagement',
+          metric: 'Total Blogs',
+          value: data.dashboardStats.totalBlogs,
+          change: 0
+        },
+        {
+          id: '2',
+          type: 'Event Engagement',
+          metric: 'Total Events',
+          value: data.dashboardStats.totalEvents,
+          change: 0
+        },
+        {
+          id: '3',
+          type: 'Post Engagement',
+          metric: 'Total Posts',
+          value: data.dashboardStats.totalPosts,
+          change: 0
+        },
+        {
+          id: '4',
+          type: 'User Engagement',
+          metric: 'Total Users',
+          value: data.dashboardStats.totalUsers,
+          change: 0
+        }
+      ];
+      
+      if (engagements.some((eng, index) => eng.value !== newEngagements[index].value)) {
+        setEngagements(newEngagements);
+      }
+      
+      // Update featured blogs if needed
+      const newBlogs = data.featuredBlogs.map(blog => ({
+        id: blog.id,
+        title: blog.title,
+        author: blog.author,
+        date: blog.date,
+        excerpt: blog.excerpt,
+        imageUrl: blog.imageUrl
+      }));
+      
+      if (featuredBlogs.length !== newBlogs.length || 
+          newBlogs.some((newBlog, index) => 
+            featuredBlogs[index]?.id !== newBlog.id || 
+            featuredBlogs[index]?.title !== newBlog.title)) {
+        setFeaturedBlogs(newBlogs);
+      }
     }
-  }, [data]);
+  }, [data, stats, activities, events, engagements, pipeline, featuredBlogs]);
 
 
 
@@ -563,7 +537,7 @@ const DashboardPage = () => {
                   <div key={blog.id} className="p-6 hover:bg-gray-50">
                     <div className="flex items-start">
                       <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden mr-4">
-                        <img 
+                        <Image 
                           src={blog.imageUrl || 'https://placehold.co/80x80?text=Blog'} 
                           alt={blog.title}
                           className="w-full h-full object-cover"

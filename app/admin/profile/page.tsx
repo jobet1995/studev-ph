@@ -128,36 +128,36 @@ const ProfilePage = () => {
   // Populate form when data loads
   useEffect(() => {
     if (userProfile && !isEditing) {
-      setFormData(prevFormData => {
-        // Check if the new values differ from current state to avoid unnecessary updates
-        const newFormData = {
-          ...prevFormData,
-          firstName: userProfile.firstName || '',
-          lastName: userProfile.lastName || '',
-          email: userProfile.email || '',
-          position: userProfile.position || '',
-          role: userProfile.role || '',
-          bio: userProfile.bio || '',
-          timezone: userProfile.timezone || 'Asia/Manila',
-          language: userProfile.language || 'en',
-          avatar: null
-        };
-        
-        // Compare values to see if update is needed
-        const hasChanges = 
-          prevFormData.firstName !== newFormData.firstName ||
-          prevFormData.lastName !== newFormData.lastName ||
-          prevFormData.email !== newFormData.email ||
-          prevFormData.position !== newFormData.position ||
-          prevFormData.role !== newFormData.role ||
-          prevFormData.bio !== newFormData.bio ||
-          prevFormData.timezone !== newFormData.timezone ||
-          prevFormData.language !== newFormData.language;
-        
-        return hasChanges ? newFormData : prevFormData;
-      });
+      // Check if the new values differ from current state to avoid unnecessary updates
+      const newFormData = {
+        ...formData,
+        firstName: userProfile.firstName || '',
+        lastName: userProfile.lastName || '',
+        email: userProfile.email || '',
+        position: userProfile.position || '',
+        role: userProfile.role || '',
+        bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Manila',
+        language: userProfile.language || 'en',
+        avatar: null
+      };
+      
+      // Compare values to see if update is needed
+      const hasChanges = 
+        formData.firstName !== newFormData.firstName ||
+        formData.lastName !== newFormData.lastName ||
+        formData.email !== newFormData.email ||
+        formData.position !== newFormData.position ||
+        formData.role !== newFormData.role ||
+        formData.bio !== newFormData.bio ||
+        formData.timezone !== newFormData.timezone ||
+        formData.language !== newFormData.language;
+      
+      if (hasChanges) {
+        setFormData(newFormData);
+      }
     }
-  }, [userProfile, isEditing]);
+  }, [userProfile, isEditing, formData]);
   
   // Clean up object URLs when component unmounts
   useEffect(() => {
