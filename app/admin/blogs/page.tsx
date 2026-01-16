@@ -55,6 +55,11 @@ const CREATE_BLOG = gql`
   }
 `;
 
+/**
+ * Admin blogs management page
+ * Displays and manages blog posts with create, edit, and delete functionality
+ * @returns {JSX.Element} Admin blogs management interface
+ */
 export default function AdminBlogsPage() {
   const { data, loading, error, refetch } = useQuery<BlogsData>(GET_BLOGS, {
     variables: {

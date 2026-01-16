@@ -91,6 +91,13 @@ const client = new ApolloClient({
     },
 });
 
+/**
+ * Apollo Client provider wrapper
+ * Wraps the application with Apollo Provider for GraphQL functionality
+ * @param {Object} props - Component props
+ * @param {React.ReactNode} props.children - Child components to wrap
+ * @returns {JSX.Element} Apollo Provider wrapper component
+ */
 export function ApolloWrapper({ children }: { children: React.ReactNode }) {
     return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }

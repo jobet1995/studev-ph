@@ -29,6 +29,11 @@ const GET_EVENTS = gql`
   }
 `;
 
+/**
+ * Public events listing page
+ * Displays upcoming events with details
+ * @returns {JSX.Element} Events listing page
+ */
 export default function EventsPage() {
     const { loading, error, data } = useQuery<EventsData>(GET_EVENTS);
 

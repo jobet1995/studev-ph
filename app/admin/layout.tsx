@@ -8,6 +8,13 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
+/**
+ * Admin layout component
+ * Provides authentication wrapper and sidebar navigation for admin pages
+ * @param {AdminLayoutProps} props - Component props
+ * @param {ReactNode} props.children - Child components to render
+ * @returns {JSX.Element} Admin layout with sidebar and authentication
+ */
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();

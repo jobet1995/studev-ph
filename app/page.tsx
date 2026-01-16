@@ -77,6 +77,11 @@ interface LandingPageData {
   stats: Stats;
 }
 
+/**
+ * Landing page component
+ * Displays featured content, statistics, and navigation for the application
+ * @returns {React.ReactElement} Landing page with hero section and featured content
+ */
 export default function Home(): React.ReactElement {
   const { data, loading, error } = useQuery<LandingPageData>(GET_LANDING_PAGE_CONTENT);
 
