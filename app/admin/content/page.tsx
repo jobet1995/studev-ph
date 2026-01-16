@@ -10,6 +10,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import Table from '../components/Table';
 import Tabs from '../components/Tabs';
+import ModalMessage from '../components/ModalMessage';
 
 // GraphQL mutations
 const CREATE_BLOG = gql`
@@ -167,6 +168,14 @@ export default function AdminPage() {
   const [editingBlogId, setEditingBlogId] = useState<string | null>(null);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
+  // State for modal message
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success" as "success" | "error" | "warning" | "info"
+  });
+  
   // Mutations
   const [createBlog] = useMutation(CREATE_BLOG);
   const [updateBlog] = useMutation(UPDATE_BLOG);
@@ -213,10 +222,20 @@ export default function AdminPage() {
         console.log(`Updating blog with ID: ${extractedId}`);
         await updateBlog({ variables: { input: { id: extractedId, ...restBlogInput } } });
         setEditingBlogId(null);
-        alert("Blog updated successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Blog updated successfully!",
+          type: "success"
+        });
       } else {
         await createBlog({ variables: { input: blogInput } });
-        alert("Blog created successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Blog created successfully!",
+          type: "success"
+        });
       }
       
       // Reset form
@@ -263,11 +282,21 @@ export default function AdminPage() {
         console.log(`Updating event with ID: ${editingEventId}`);
         await updateEvent({ variables: { input: { id: editingEventId, ...eventInput } } });
         setEditingEventId(null);
-        alert("Event updated successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Event updated successfully!",
+          type: "success"
+        });
       } else {
         // Create a new event
         await createEvent({ variables: { input: eventInput } });
-        alert("Event created successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Event created successfully!",
+          type: "success"
+        });
       }
         
       // Reset form
@@ -365,7 +394,12 @@ export default function AdminPage() {
     if (window.confirm("Are you sure you want to delete this blog?")) {
       try {
         await deleteBlog({ variables: { id } });
-        alert("Blog deleted successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Blog deleted successfully!",
+          type: "success"
+        });
         refetchBlogs();
       } catch (err) {
         console.error(err);
@@ -380,7 +414,12 @@ export default function AdminPage() {
     if (window.confirm("Are you sure you want to delete this event?")) {
       try {
         await deleteEvent({ variables: { id } });
-        alert("Event deleted successfully!");
+        setModalState({
+          isOpen: true,
+          title: "Success",
+          message: "Event deleted successfully!",
+          type: "success"
+        });
         refetchEvents();
       } catch (err) {
         console.error(err);
@@ -796,6 +835,14 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+      
+      <ModalMessage
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </Layout>
   );
 }

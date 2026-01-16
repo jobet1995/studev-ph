@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
-import Link from 'next/link';
+import ModalMessage from '../components/ModalMessage';
+import Calendar, { CalendarEvent } from '../components/Calendar';
 
 interface Event {
   id: string;
@@ -55,6 +56,26 @@ const CREATE_EVENT = gql`
   }
 `;
 
+// GraphQL mutation to update an event
+const UPDATE_EVENT = gql`
+  mutation UpdateEvent($input: UpdateEventInput!) {
+    updateEvent(input: $input) {
+      id
+      title
+      date
+      location
+      eventType
+    }
+  }
+`;
+
+// GraphQL mutation to delete an event
+const DELETE_EVENT = gql`
+  mutation DeleteEvent($id: ID!) {
+    deleteEvent(id: $id)
+  }
+`;
+
 /**
  * Admin events management page
  * @returns {JSX.Element} Admin events page
@@ -65,6 +86,32 @@ export default function AdminEventsPage() {
       pagination: { page: 1, limit: 10 }
     }
   });
+  
+  // State for modal message
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "success" as "success" | "error" | "warning" | "info"
+  });
+  
+  // State for editing
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  
+  // State for calendar view
+  const [showCalendar, setShowCalendar] = useState(false);
+  
+  // State for showing table (opposite of calendar)
+  const showTable = !showCalendar;
+  
+  // Convert GraphQL events to calendar events
+  const calendarEvents: CalendarEvent[] = (data?.events.items || []).map(event => ({
+    id: event.id,
+    title: event.title,
+    date: new Date(event.date),
+    type: 'event' as const,
+    color: 'blue'
+  }));
   
   const [createEvent] = useMutation(CREATE_EVENT, {
     onCompleted: () => {
@@ -82,13 +129,78 @@ export default function AdminEventsPage() {
       setRegistrationUrl('');
       setImageUrl('');
       setShowForm(false);
+      setModalState({
+        isOpen: true,
+        title: "Success",
+        message: "Event created successfully!",
+        type: "success"
+      });
     },
     onError: (error) => {
       console.error('Error creating event:', error);
+      setModalState({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to create event. Please try again.",
+        type: "error"
+      });
     }
   });
   
-  const [searchTerm, setSearchTerm] = useState('');
+  const [updateEvent] = useMutation(UPDATE_EVENT, {
+    onCompleted: () => {
+      refetch();
+      setTitle('');
+      setDescription('');
+      setDate('');
+      setEndDate('');
+      setLocation('');
+      setEventType('CONFERENCE');
+      setCapacity('');
+      setIsVirtual(false);
+      setRegistrationUrl('');
+      setImageUrl('');
+      setShowForm(false);
+      setEditingEventId(null);
+      setModalState({
+        isOpen: true,
+        title: "Success",
+        message: "Event updated successfully!",
+        type: "success"
+      });
+    },
+    onError: (error) => {
+      console.error('Error updating event:', error);
+      setModalState({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to update event. Please try again.",
+        type: "error"
+      });
+    }
+  });
+  
+  const [deleteEvent] = useMutation(DELETE_EVENT, {
+    onCompleted: () => {
+      refetch();
+      setModalState({
+        isOpen: true,
+        title: "Success",
+        message: "Event deleted successfully!",
+        type: "success"
+      });
+    },
+    onError: (error) => {
+      console.error('Error deleting event:', error);
+      setModalState({
+        isOpen: true,
+        title: "Error",
+        message: "Failed to delete event. Please try again.",
+        type: "error"
+      });
+    }
+  });
+  
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -102,11 +214,46 @@ export default function AdminEventsPage() {
   const [imageUrl, setImageUrl] = useState('');
 
   const events = data?.events.items || [];
-
-  const filteredEvents = events.filter(event =>
-    event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.location.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  
+  // Handle editing an event
+  const handleEditEvent = (event: Event) => {
+    setTitle(event.title);
+    setDescription(""); // Would need to fetch full event data for complete editing
+    setDate(event.date);
+    setEndDate("");
+    setLocation(event.location);
+    setEventType(event.eventType);
+    setCapacity("");
+    setIsVirtual(false);
+    setRegistrationUrl("");
+    setImageUrl("");
+    setEditingEventId(event.id);
+    setShowForm(true);
+  };
+  
+  // Handle deleting an event
+  const handleDeleteEvent = (eventId: string) => {
+    if (window.confirm("Are you sure you want to delete this event?")) {
+      deleteEvent({ variables: { id: eventId } });
+    }
+  };
+  
+  // Handle calendar event click
+  const handleCalendarEventClick = (event: CalendarEvent) => {
+    // Find the full event data
+    const fullEvent = (data?.events.items || []).find(e => e.id === event.id);
+    if (fullEvent) {
+      handleEditEvent(fullEvent);
+    }
+  };
+  
+  // Handle calendar date click
+  const handleCalendarDateClick = (date: Date) => {
+    // Set the form to create a new event on this date
+    setDate(date.toISOString().split('T')[0]);
+    setShowForm(true);
+    setShowCalendar(false);
+  };
 
   if (loading) {
     return (
@@ -137,46 +284,77 @@ export default function AdminEventsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Manage Events</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-        >
-          {showForm ? 'Cancel' : 'Add New Event'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowCalendar(!showCalendar)}
+            className={`px-4 py-2 rounded-md ${
+              showCalendar 
+                ? 'bg-green-600 text-white hover:bg-green-700' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            {showCalendar ? 'Hide Calendar' : 'Show Calendar'}
+          </button>
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            {showForm ? 'Cancel' : 'Add New Event'}
+          </button>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search events..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      {/* Calendar View */}
+      {showCalendar && (
+        <div className="mb-6">
+          <Calendar
+            events={calendarEvents}
+            onEventClick={handleCalendarEventClick}
+            onDateClick={handleCalendarDateClick}
+          />
+        </div>
+      )}
 
       {/* Add Event Form */}
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Event</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            {editingEventId ? 'Update Event' : 'Create New Event'}
+          </h2>
           <form onSubmit={(e) => {
             e.preventDefault();
-            createEvent({
-              variables: {
-                input: {
-                  title,
-                  description,
-                  date,
-                  endDate: endDate || null,
-                  location,
-                  eventType,
-                  capacity: capacity ? parseInt(capacity) : null,
-                  isVirtual,
-                  registrationUrl: registrationUrl || null,
-                  imageUrl: imageUrl || null,
+            
+            const eventInput = {
+              title,
+              description,
+              date,
+              endDate: endDate || null,
+              location,
+              eventType,
+              capacity: capacity ? parseInt(capacity) : null,
+              isVirtual,
+              registrationUrl: registrationUrl || null,
+              imageUrl: imageUrl || null,
+            };
+            
+            if (editingEventId) {
+              // Update existing event
+              updateEvent({
+                variables: {
+                  input: {
+                    id: editingEventId,
+                    ...eventInput
+                  }
                 }
-              }
-            });
+              });
+            } else {
+              // Create new event
+              createEvent({
+                variables: {
+                  input: eventInput
+                }
+              });
+            }
           }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -323,72 +501,89 @@ export default function AdminEventsPage() {
                 type="submit"
                 className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Create Event
+                {editingEventId ? 'Update Event' : 'Create Event'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Title
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Location
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredEvents.length > 0 ? (
-              filteredEvents.map((event) => (
-                <tr key={event.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(event.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{event.location}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                      {event.eventType}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/admin/events/${event.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                      Edit
-                    </Link>
-                    <button className="text-red-600 hover:text-red-900">
-                      Delete
-                    </button>
+      {/* Events Table */}
+      {showTable && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Title
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Location
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <tr key={event.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{event.title}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(event.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{event.location}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                        {event.eventType}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button 
+                        onClick={() => handleEditEvent(event)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteEvent(event.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                    No events found
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No events found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      <ModalMessage
+        isOpen={modalState.isOpen}
+        onClose={() => setModalState({ ...modalState, isOpen: false })}
+        title={modalState.title}
+        message={modalState.message}
+        type={modalState.type}
+      />
     </div>
   );
 }
