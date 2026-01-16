@@ -4,12 +4,17 @@ import { ApolloClient, InMemoryCache, HttpLink, from } from "@apollo/client";
 import { onError } from "@apollo/client/link/error";
 import { ApolloProvider } from "@apollo/client/react";
 
-// Error handling link
-const errorLink = onError((errorInfo: any) => {
-    const { graphQLErrors, networkError } = errorInfo;
+/**
+ * Error handling link for Apollo Client
+ */
+const errorLink = onError((error) => {
+    const { graphQLErrors, networkError } = error as {
+        graphQLErrors?: Array<{ message: string; }>; 
+        networkError?: Error;
+    };
     
     if (graphQLErrors && graphQLErrors.length > 0) {
-        graphQLErrors.forEach((graphQLError: any) => {
+        graphQLErrors.forEach((graphQLError) => {
             console.error(`GraphQL error: ${graphQLError.message}`);
         });
     }
@@ -35,15 +40,25 @@ const cache = new InMemoryCache({
                 blogs: {
                     keyArgs: ['filter', 'sort'],
                     merge(existing = { items: [], totalCount: 0 }, incoming) {
-                        // For simplicity, we'll just return the incoming data
-                        // In a real app, you'd implement pagination merging
-                        return incoming;
+                        // Merge pagination results: combine existing items with new items
+                        const mergedItems = [...existing.items, ...incoming.items];
+                        return {
+                            ...incoming,
+                            items: mergedItems,
+                            totalCount: incoming.totalCount || existing.totalCount
+                        };
                     },
                 },
                 events: {
                     keyArgs: ['filter'],
                     merge(existing = { items: [], totalCount: 0 }, incoming) {
-                        return incoming;
+                        // Merge pagination results: combine existing items with new items
+                        const mergedItems = [...existing.items, ...incoming.items];
+                        return {
+                            ...incoming,
+                            items: mergedItems,
+                            totalCount: incoming.totalCount || existing.totalCount
+                        };
                     },
                 },
             },

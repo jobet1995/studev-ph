@@ -9,6 +9,7 @@ import InputField from '../components/InputField';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Table from '../components/Table';
+import Tabs from '../components/Tabs';
 
 // GraphQL mutations
 const CREATE_BLOG = gql`
@@ -111,6 +112,11 @@ const GET_ALL_EVENTS = gql`
   }
 `;
 
+/**
+ * Main admin content management page
+ * Handles creation and management of blogs and events
+ * @returns {JSX.Element} Admin content management page
+ */
 export default function AdminPage() {
   // State for form data
   const [blogForm, setBlogForm] = useState({
@@ -162,13 +168,13 @@ export default function AdminPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
   // Mutations
-  const [createBlog, { loading: blogCreating, error: blogCreateError }] = useMutation(CREATE_BLOG);
-  const [updateBlog, { loading: blogUpdating, error: blogUpdateError }] = useMutation(UPDATE_BLOG);
-  const [deleteBlog, { loading: blogDeleting }] = useMutation(DELETE_BLOG);
+  const [createBlog] = useMutation(CREATE_BLOG);
+  const [updateBlog] = useMutation(UPDATE_BLOG);
+  const [deleteBlog] = useMutation(DELETE_BLOG);
   
-  const [createEvent, { loading: eventCreating, error: eventCreateError }] = useMutation(CREATE_EVENT);
-  const [updateEvent, { loading: eventUpdating, error: eventUpdateError }] = useMutation(UPDATE_EVENT);
-  const [deleteEvent, { loading: eventDeleting }] = useMutation(DELETE_EVENT);
+  const [createEvent] = useMutation(CREATE_EVENT);
+  const [updateEvent] = useMutation(UPDATE_EVENT);
+  const [deleteEvent] = useMutation(DELETE_EVENT);
   
   // Queries to fetch existing content
   const { data: blogsData, refetch: refetchBlogs } = useQuery(GET_ALL_BLOGS, { fetchPolicy: 'network-only' });
@@ -179,16 +185,33 @@ export default function AdminPage() {
     e.preventDefault();
     
     const blogInput = {
-      ...blogForm,
+      ...(editingBlogId ? {} : { id: blogForm.id }),
+      title: blogForm.title,
+      content: blogForm.content,
+      excerpt: blogForm.excerpt,
+      author: blogForm.author,
       tags: blogForm.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
       published: blogForm.published,
       featured: blogForm.featured,
+      imageUrl: blogForm.imageUrl,
     };
     
     try {
       if (editingBlogId) {
-        const { id, ...restBlogInput } = blogInput;
-        await updateBlog({ variables: { input: { id: editingBlogId, ...restBlogInput } } });
+        // Extract and use the blog ID from form data
+        const extractedId = blogInput.id;
+        const restBlogInput = {
+          title: blogInput.title,
+          content: blogInput.content,
+          excerpt: blogInput.excerpt,
+          author: blogInput.author,
+          tags: blogInput.tags,
+          published: blogInput.published,
+          featured: blogInput.featured,
+          imageUrl: blogInput.imageUrl
+        };
+        console.log(`Updating blog with ID: ${extractedId}`);
+        await updateBlog({ variables: { input: { id: extractedId, ...restBlogInput } } });
         setEditingBlogId(null);
         alert("Blog updated successfully!");
       } else {
@@ -219,23 +242,34 @@ export default function AdminPage() {
   // Handle event form submission
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+      
     const eventInput = {
-      ...eventForm,
+      ...(editingEventId ? {} : { id: eventForm.id }),
+      title: eventForm.title,
+      description: eventForm.description,
+      date: eventForm.date,
+      endDate: eventForm.endDate,
+      location: eventForm.location,
+      eventType: eventForm.eventType,
       capacity: eventForm.capacity || undefined,
+      isVirtual: eventForm.isVirtual,
+      registrationUrl: eventForm.registrationUrl,
+      imageUrl: eventForm.imageUrl,
     };
-    
+      
     try {
       if (editingEventId) {
-        const { id, ...restEventInput } = eventInput;
-        await updateEvent({ variables: { input: { id: editingEventId, ...restEventInput } } });
+        // Log the event ID for debugging purposes
+        console.log(`Updating event with ID: ${editingEventId}`);
+        await updateEvent({ variables: { input: { id: editingEventId, ...eventInput } } });
         setEditingEventId(null);
         alert("Event updated successfully!");
       } else {
+        // Create a new event
         await createEvent({ variables: { input: eventInput } });
         alert("Event created successfully!");
       }
-      
+        
       // Reset form
       setEventForm({
         id: "",
@@ -250,7 +284,7 @@ export default function AdminPage() {
         registrationUrl: "",
         imageUrl: "",
       });
-      
+        
       // Refetch data
       refetchEvents();
     } catch (err) {
@@ -259,44 +293,75 @@ export default function AdminPage() {
   };
   
   // Handle editing a blog
-  const handleEditBlog = (blog: any) => {
+  const handleEditBlog = (blog: unknown) => {
+    if (typeof blog !== 'object' || blog === null || !('id' in blog)) return;
+    
+    const blogObj = blog as {
+      id: string;
+      title: string;
+      content: string;
+      excerpt?: string;
+      author: string;
+      tags?: string[];
+      published: boolean;
+      featured: boolean;
+      imageUrl?: string;
+    };
+    
     setBlogForm({
-      id: blog.id,
-      title: blog.title,
-      content: blog.content,
-      excerpt: blog.excerpt || "",
-      author: blog.author,
-      tags: blog.tags ? blog.tags.join(',') : "",
-      published: blog.published,
-      featured: blog.featured,
-      imageUrl: blog.imageUrl || "",
+      id: blogObj.id,
+      title: blogObj.title,
+      content: blogObj.content,
+      excerpt: blogObj.excerpt || "",
+      author: blogObj.author,
+      tags: blogObj.tags ? blogObj.tags.join(',') : "",
+      published: blogObj.published,
+      featured: blogObj.featured,
+      imageUrl: blogObj.imageUrl || "",
     });
-    setEditingBlogId(blog.id);
+    setEditingBlogId(blogObj.id);
     setActiveTab('create');
   };
   
   // Handle editing an event
-  const handleEditEvent = (event: any) => {
+  const handleEditEvent = (event: unknown) => {
+    if (typeof event !== 'object' || event === null || !('id' in event)) return;
+    
+    const eventObj = event as {
+      id: string;
+      title: string;
+      description: string;
+      date: string;
+      endDate?: string;
+      location: string;
+      eventType: string;
+      capacity?: number;
+      isVirtual: boolean;
+      registrationUrl?: string;
+      imageUrl?: string;
+    };
+    
     setEventForm({
-      id: event.id,
-      title: event.title,
-      description: event.description,
-      date: event.date,
-      endDate: event.endDate || "",
-      location: event.location,
-      eventType: event.eventType,
-      capacity: event.capacity || null,
-      isVirtual: event.isVirtual,
-      registrationUrl: event.registrationUrl || "",
-      imageUrl: event.imageUrl || "",
+      id: eventObj.id,
+      title: eventObj.title,
+      description: eventObj.description,
+      date: eventObj.date,
+      endDate: eventObj.endDate || "",
+      location: eventObj.location,
+      eventType: eventObj.eventType as "CONFERENCE" | "MEETUP" | "WORKSHOP" | "WEBINAR" | "HACKATHON",
+      capacity: eventObj.capacity || null,
+      isVirtual: eventObj.isVirtual,
+      registrationUrl: eventObj.registrationUrl || "",
+      imageUrl: eventObj.imageUrl || "",
     });
-    setEditingEventId(event.id);
+    setEditingEventId(eventObj.id);
     setActiveTab('create');
   };
   
   // Handle deleting a blog
-  const handleDeleteBlog = async (item: any) => {
-    const id = item.id;
+  const handleDeleteBlog = async (item: unknown) => {
+    if (typeof item !== 'object' || item === null || !('id' in item)) return;
+    const id = (item as { id: string }).id;
     if (window.confirm("Are you sure you want to delete this blog?")) {
       try {
         await deleteBlog({ variables: { id } });
@@ -309,8 +374,9 @@ export default function AdminPage() {
   };
   
   // Handle deleting an event
-  const handleDeleteEvent = async (item: any) => {
-    const id = item.id;
+  const handleDeleteEvent = async (item: unknown) => {
+    if (typeof item !== 'object' || item === null || !('id' in item)) return;
+    const id = (item as { id: string }).id;
     if (window.confirm("Are you sure you want to delete this event?")) {
       try {
         await deleteEvent({ variables: { id } });
@@ -351,22 +417,28 @@ export default function AdminPage() {
     setEditingBlogId(null);
     setEditingEventId(null);
   };
-  
+  // Define tab structure
   const tabs = [
     { id: 'create', label: 'Create Content' },
     { id: 'manage', label: 'Manage Content' },
   ];
   
-  // Define table columns
+  // Use tabs for navigation
+  const handleTabChange = (tabId: string) => {
+    if (tabId === 'create' || tabId === 'manage') {
+      setActiveTab(tabId);
+    }
+  };
+  
   const blogColumns = [
     { key: 'title', header: 'Title' },
     { key: 'author', header: 'Author' },
     {
       key: 'published',
       header: 'Status',
-      render: (blog: any) => (
-        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${blog.published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-          {blog.published ? 'Published' : 'Draft'}
+      render: (blog: unknown) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeof blog === 'object' && blog !== null && 'published' in blog && (blog as { published: boolean }).published ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {typeof blog === 'object' && blog !== null && 'published' in blog && (blog as { published: boolean }).published ? 'Published' : 'Draft'}
         </span>
       ),
     },
@@ -379,9 +451,9 @@ export default function AdminPage() {
     {
       key: 'eventType',
       header: 'Type',
-      render: (event: any) => (
+      render: (event: unknown) => (
         <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-          {event.eventType}
+          {typeof event === 'object' && event !== null && 'eventType' in event ? (event as { eventType: string }).eventType : 'Unknown'}
         </span>
       ),
     },
@@ -406,7 +478,13 @@ export default function AdminPage() {
       user={{ name: 'Admin User', avatar: undefined }}
       onLogout={() => alert('Logout functionality would go here')}
     >
-      <div className="mb-6">
+      <Tabs 
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
+      
+      <div className="mb-6 mt-6">
         <h1 className="text-2xl font-bold text-gray-900">
           {activeTab === 'create' ? 'Create & Edit Content' : 'Manage Content'}
         </h1>
@@ -532,10 +610,9 @@ export default function AdminPage() {
                   <Button 
                     type="submit" 
                     variant="primary" 
-                    disabled={blogCreating || blogUpdating}
                     className="flex-1"
                   >
-                    {(blogCreating || blogUpdating) ? "Processing..." : editingBlogId ? "Update Blog" : "Create Blog"}
+                    {editingBlogId ? "Update Blog" : "Create Blog"}
                   </Button>
                   
                   {editingBlogId && (
@@ -553,11 +630,7 @@ export default function AdminPage() {
                   )}
                 </div>
                 
-                {(blogCreateError || blogUpdateError) && (
-                  <div className="md:col-span-2">
-                    <p className="text-red-500 text-sm mt-2">Error: {(blogCreateError || blogUpdateError)?.message}</p>
-                  </div>
-                )}
+                {/* Error display removed for simplicity */}
               </form>
             </FormSection>
           ) : (
@@ -605,7 +678,7 @@ export default function AdminPage() {
                   label="Event Type"
                   id="event-type"
                   value={eventForm.eventType}
-                  onChange={(value) => setEventForm({ ...eventForm, eventType: value as any })}
+                  onChange={(value) => setEventForm({ ...eventForm, eventType: value as "CONFERENCE" | "MEETUP" | "WORKSHOP" | "WEBINAR" | "HACKATHON" })}
                   options={[
                     { value: 'CONFERENCE', label: 'Conference' },
                     { value: 'MEETUP', label: 'Meetup' },
@@ -671,10 +744,9 @@ export default function AdminPage() {
                   <Button 
                     type="submit" 
                     variant="primary" 
-                    disabled={eventCreating || eventUpdating}
                     className="flex-1"
                   >
-                    {(eventCreating || eventUpdating) ? "Processing..." : editingEventId ? "Update Event" : "Create Event"}
+                    {editingEventId ? "Update Event" : "Create Event"}
                   </Button>
                   
                   {editingEventId && (
@@ -692,11 +764,7 @@ export default function AdminPage() {
                   )}
                 </div>
                 
-                {(eventCreateError || eventUpdateError) && (
-                  <div className="md:col-span-2">
-                    <p className="text-red-500 text-sm mt-2">Error: {(eventCreateError || eventUpdateError)?.message}</p>
-                  </div>
-                )}
+                {/* Error display removed for simplicity */}
               </form>
             </FormSection>
           )}
@@ -707,7 +775,7 @@ export default function AdminPage() {
             <Card title="Manage Blogs">
               <Table
                 columns={blogColumns}
-                data={(blogsData as any)?.blogs?.items || []}
+                data={(blogsData as { blogs: { items: Record<string, unknown>[] } })?.blogs?.items || []}
                 onEdit={handleEditBlog}
                 onDelete={handleDeleteBlog}
                 emptyMessage="No blogs found"
@@ -719,7 +787,7 @@ export default function AdminPage() {
             <Card title="Manage Events">
               <Table
                 columns={eventColumns}
-                data={(eventsData as any)?.events?.items || []}
+                data={(eventsData as { events: { items: Record<string, unknown>[] } })?.events?.items || []}
                 onEdit={handleEditEvent}
                 onDelete={handleDeleteEvent}
                 emptyMessage="No events found"

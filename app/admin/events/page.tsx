@@ -55,6 +55,10 @@ const CREATE_EVENT = gql`
   }
 `;
 
+/**
+ * Admin events management page
+ * @returns {JSX.Element} Admin events page
+ */
 export default function AdminEventsPage() {
   const { data, loading, error, refetch } = useQuery<EventsData>(GET_EVENTS, {
     variables: {

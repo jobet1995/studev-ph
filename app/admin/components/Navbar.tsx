@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface NavbarProps {
   title: string;
@@ -16,7 +17,7 @@ const Navbar: React.FC<NavbarProps> = ({ title, user, onLogout }) => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              
+              <h1 className="text-xl font-bold">{title}</h1>
             </div>
           </div>
           <div className="flex items-center">
@@ -24,10 +25,12 @@ const Navbar: React.FC<NavbarProps> = ({ title, user, onLogout }) => {
               <div className="ml-3 relative">
                 <div className="flex items-center space-x-3">
                   {user.avatar ? (
-                    <img 
-                      className="h-10 w-10 rounded-full border-2 border-white" 
+                    <Image 
+                      className="rounded-full border-2 border-white" 
                       src={user.avatar} 
-                      alt={user.name} 
+                      alt={user.name}
+                      width={40}
+                      height={40}
                     />
                   ) : (
                     <div className="bg-indigo-500 border-2 border-white rounded-full w-10 h-10 flex items-center justify-center text-sm font-bold">

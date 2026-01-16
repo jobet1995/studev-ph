@@ -10,8 +10,9 @@
  * Ver                    Date                    Author                  Modification
  * 1.0                    12-23-20254             Jobet P. Casquejo       Initial Version
  */
-import Link from 'next/link';
-import { ApolloWrapper } from './components/apollo-wrapper';
+import Link from "next/link";
+import Image from "next/image";
+import { ApolloWrapper } from "./components/apollo-wrapper";
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 
@@ -188,10 +189,12 @@ export default function Home(): React.ReactElement {
                         <Link key={blog.id} href={`/blogs/${blog.slug}`} className="block group">
                           <div className="flex items-start space-x-4 p-4 rounded-lg hover:bg-gray-50 transition-colors">
                             {blog.imageUrl && (
-                              <img 
+                              <Image 
                                 src={blog.imageUrl} 
                                 alt={blog.title} 
-                                className="w-16 h-16 object-cover rounded-md flex-shrink-0"
+                                width={64}
+                                height={64}
+                                className="object-cover rounded-md flex-shrink-0"
                               />
                             )}
                             <div>

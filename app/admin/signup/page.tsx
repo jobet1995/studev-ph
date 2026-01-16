@@ -21,6 +21,10 @@ interface FormErrors {
   general?: string;
 }
 
+/**
+ * Admin signup page
+ * @returns {JSX.Element} Admin signup page
+ */
 export default function SignupPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
@@ -93,6 +97,7 @@ export default function SignupPage() {
       // Redirect to dashboard
       router.push('/admin/dashboard');
     } catch (error) {
+      console.error('Registration failed:', error);
       setErrors({ general: 'Registration failed. Please try again.' });
     } finally {
       setIsLoading(false);

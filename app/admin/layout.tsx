@@ -14,16 +14,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    setIsLoggedIn(!!token);
+    const checkAuth = () => {
+      const token = localStorage.getItem('admin_token');
+      const isLoggedIn = !!token;
+      
+      // Update state
+      setIsLoggedIn(isLoggedIn);
+      
+      // If we're not on a public page and not logged in, redirect to login
+      if (!isLoggedIn && 
+          pathname !== '/admin/login' && 
+          pathname !== '/admin/signup' && 
+          pathname !== '/admin/forgot-password') {
+        router.push('/admin/login');
+      }
+    };
     
-    // If we're not on a public page and not logged in, redirect to login
-    if (!token && 
-        pathname !== '/admin/login' && 
-        pathname !== '/admin/signup' && 
-        pathname !== '/admin/forgot-password') {
-      router.push('/admin/login');
-    }
+    checkAuth();
   }, [router, pathname]);
 
   const handleLogout = () => {

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 interface FormData {
@@ -13,8 +12,11 @@ interface FormErrors {
   general?: string;
 }
 
+/**
+ * Admin forgot password page
+ * @returns {JSX.Element} Admin forgot password page
+ */
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     email: ''
   });
@@ -58,6 +60,7 @@ export default function ForgotPasswordPage() {
       // For now, we'll simulate a successful request
       setIsSuccess(true);
     } catch (error) {
+      console.error('Password reset request failed:', error);
       setErrors({ general: 'Failed to send password reset email. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -76,7 +79,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h2 className="mt-6 text-3xl font-bold text-gray-900">Check your email</h2>
             <p className="mt-2 text-sm text-gray-600">
-              We've sent a password reset link to {formData.email}
+              We&apos;ve sent a password reset link to {formData.email}
             </p>
           </div>
 
@@ -90,7 +93,7 @@ export default function ForgotPasswordPage() {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm text-green-700">
-                    If an account with that email exists, you'll receive a password reset link shortly.
+                    If an account with that email exists, you&apos;ll receive a password reset link shortly.
                   </p>
                 </div>
               </div>
@@ -131,7 +134,7 @@ export default function ForgotPasswordPage() {
           </div>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">Reset your password</h2>
           <p className="mt-2 text-sm text-gray-600">
-            Enter your email and we'll send you a link to reset your password
+            Enter your email and we&apos;ll send you a link to reset your password
           </p>
         </div>
 

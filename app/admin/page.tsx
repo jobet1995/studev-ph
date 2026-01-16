@@ -10,6 +10,10 @@ interface SystemStats {
   users: number;
 }
 
+/**
+ * Main admin landing page
+ * @returns {JSX.Element} Admin landing page
+ */
 export default function AdminPage() {
   const router = useRouter();
   const [stats, setStats] = useState<SystemStats | null>(null);

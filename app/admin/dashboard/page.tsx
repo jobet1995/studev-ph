@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
@@ -22,13 +21,6 @@ interface Event {
   eventType: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  status: string;
-}
 
 interface DashboardStats {
   totalBlogs: number;
@@ -83,8 +75,11 @@ const GET_DASHBOARD_DATA = gql`
   }
 `;
 
+/**
+ * Admin dashboard page showing statistics and recent activity
+ * @returns {JSX.Element} Admin dashboard page
+ */
 export default function AdminDashboard() {
-  const router = useRouter();
   const [currentTime, setCurrentTime] = useState<string>('');
   
   // Use Apollo Client to fetch dashboard data
@@ -136,8 +131,6 @@ export default function AdminDashboard() {
 
   const stats = data?.dashboardStats;
   const recentActivities = data?.recentActivity || [];
-  const featuredBlogs = data?.featuredBlogs || [];
-  const upcomingEvents = data?.upcomingEvents || [];
 
   return (
     <div className="min-h-screen bg-gray-50">

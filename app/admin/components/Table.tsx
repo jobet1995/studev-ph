@@ -15,7 +15,13 @@ interface TableProps<T> {
   title?: string;
 }
 
-const Table = <T extends Record<string, any>>({
+/**
+ * Generic table component for displaying data
+ * @template T - Type of data items
+ * @param {TableProps<T>} props - Table component props
+ * @returns {JSX.Element} Table component
+ */
+const Table = <T extends Record<string, unknown>>({
   columns,
   data,
   onEdit,

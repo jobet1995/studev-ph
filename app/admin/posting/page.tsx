@@ -62,6 +62,10 @@ const DELETE_POST = gql`
   }
 `;
 
+/**
+ * Admin posting page component for creating and managing quick posts
+ * @returns {JSX.Element} The admin posting page
+ */
 export default function AdminPostingPage() {
   const [activeTab, setActiveTab] = useState<'create' | 'view' | 'manage'>('create');
   const [showForm, setShowForm] = useState(false);
@@ -240,7 +244,7 @@ export default function AdminPostingPage() {
                 <select
                   id="priority"
                   value={formData.priority}
-                  onChange={(e) => setFormData({...formData, priority: e.target.value as any})}
+                  onChange={(e) => setFormData({...formData, priority: e.target.value as 'low' | 'medium' | 'high'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
                 >
                   <option value="low">Low</option>

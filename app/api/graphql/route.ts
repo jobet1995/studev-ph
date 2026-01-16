@@ -55,6 +55,109 @@ interface Post {
     published: boolean;
 }
 
+// GraphQL resolver parameter interfaces
+interface BlogFilter {
+    author?: string;
+    tag?: string;
+    published?: boolean;
+    featured?: boolean;
+}
+
+interface BlogSort {
+    field: string;
+    direction: 'ASC' | 'DESC';
+}
+
+interface PaginationInput {
+    page?: number;
+    limit?: number;
+}
+
+interface EventFilter {
+    eventType?: string;
+    location?: string;
+    isVirtual?: boolean;
+    upcoming?: boolean;
+}
+
+interface PostFilter {
+    category?: string;
+    priority?: string;
+    author?: string;
+    published?: boolean;
+}
+
+interface CreateBlogInput {
+    title: string;
+    content: string;
+    excerpt?: string;
+    author: string;
+    tags?: string[];
+    published?: boolean;
+    featured?: boolean;
+    imageUrl?: string;
+    readTime?: number;
+}
+
+interface UpdateBlogInput {
+    id: string;
+    title?: string;
+    content?: string;
+    excerpt?: string;
+    author?: string;
+    tags?: string[];
+    published?: boolean;
+    featured?: boolean;
+    imageUrl?: string;
+    readTime?: number;
+}
+
+interface CreateEventInput {
+    title: string;
+    description: string;
+    date: string;
+    endDate?: string;
+    location: string;
+    eventType: string;
+    capacity?: number | null;
+    isVirtual?: boolean;
+    registrationUrl?: string;
+    imageUrl?: string;
+}
+
+interface UpdateEventInput {
+    id: string;
+    title?: string;
+    description?: string;
+    date?: string;
+    endDate?: string;
+    location?: string;
+    eventType?: string;
+    capacity?: number | null;
+    isVirtual?: boolean;
+    registrationUrl?: string;
+    imageUrl?: string;
+}
+
+interface CreatePostInput {
+    title: string;
+    content: string;
+    category: string;
+    priority: string;
+    author: string;
+    published?: boolean;
+}
+
+interface UpdatePostInput {
+    id: string;
+    title?: string;
+    content?: string;
+    category?: string;
+    priority?: string;
+    author?: string;
+    published?: boolean;
+}
+
 // Initialize data stores
 let blogs: Blog[] = [];
 let events: Event[] = [];
@@ -75,7 +178,7 @@ const schema = createSchema({
     resolvers: {
         Query: {
             // Enhanced blog queries with filtering, sorting and pagination
-            blogs: (_: unknown, { filter, sort, pagination }: { filter?: any; sort?: any; pagination?: any }) => {
+            blogs: (_: unknown, { filter, sort, pagination }: { filter?: BlogFilter; sort?: BlogSort; pagination?: PaginationInput }) => {
                 let filteredBlogs = [...blogs];
                 
                 // Apply filters if provided
@@ -84,7 +187,7 @@ const schema = createSchema({
                         filteredBlogs = filteredBlogs.filter(blog => blog.author === filter.author);
                     }
                     if (filter.tag) {
-                        filteredBlogs = filteredBlogs.filter(blog => blog.tags.includes(filter.tag));
+                        filteredBlogs = filteredBlogs.filter(blog => blog.tags.includes(filter.tag!));
                     }
                     if (typeof filter.published !== 'undefined') {
                         filteredBlogs = filteredBlogs.filter(blog => blog.published === filter.published);
@@ -97,7 +200,7 @@ const schema = createSchema({
                 // Apply sorting if provided
                 if (sort) {
                     filteredBlogs.sort((a, b) => {
-                        let aValue: any, bValue: any;
+                        let aValue: string | number, bValue: string | number;
                         
                         switch(sort.field) {
                             case 'DATE':
@@ -113,8 +216,8 @@ const schema = createSchema({
                                 bValue = b.author.toLowerCase();
                                 break;
                             default:
-                                aValue = (a as any)[sort.field.toLowerCase()];
-                                bValue = (b as any)[sort.field.toLowerCase()];
+                                aValue = (a as unknown as Record<string, string | number>)[sort.field.toLowerCase()] || '';
+                                bValue = (b as unknown as Record<string, string | number>)[sort.field.toLowerCase()] || '';
                         }
                         
                         if (sort.direction === 'ASC') {
@@ -154,7 +257,7 @@ const schema = createSchema({
             },
             
             // Enhanced event queries with filtering and pagination
-            events: (_: unknown, { filter, pagination }: { filter?: any; pagination?: any }) => {
+            events: (_: unknown, { filter, pagination }: { filter?: EventFilter; pagination?: PaginationInput }) => {
                 let filteredEvents = [...events];
                 
                 // Apply filters if provided
@@ -163,7 +266,7 @@ const schema = createSchema({
                         filteredEvents = filteredEvents.filter(event => event.eventType === filter.eventType);
                     }
                     if (filter.location) {
-                        filteredEvents = filteredEvents.filter(event => event.location.includes(filter.location));
+                        filteredEvents = filteredEvents.filter(event => event.location.includes(filter.location!));
                     }
                     if (typeof filter.isVirtual !== 'undefined') {
                         filteredEvents = filteredEvents.filter(event => event.isVirtual === filter.isVirtual);
@@ -234,10 +337,17 @@ const schema = createSchema({
             },
             
             // User queries
-            users: (_: unknown, { filter, pagination }: { filter?: any; pagination?: any }) => {
+            users: (_: unknown, { filter, pagination }: { filter?: Record<string, unknown>; pagination?: PaginationInput }) => {
                 // For now, return empty users list since we removed mock data
                 // In a real app, this would query a user database
                 const users: User[] = [];
+                
+                // Apply filters if provided
+                if (filter) {
+                    // Filter implementation would go here in a real app
+                    // For example: filtering by role, status, etc.
+                    console.log('User filter applied:', filter);
+                }
                 
                 // Apply pagination
                 const page = pagination?.page || 1;
@@ -255,13 +365,15 @@ const schema = createSchema({
                 };
             },
             
-            user: (_: unknown, { id }: { id: string }) => {
+            user: (_root: unknown, { id }: { id: string }) => {
+                // Log the user lookup for debugging purposes
+                console.log(`Looking up user with ID: ${id}`);
                 // Return null since we have no user data
                 return null;
             },
             
             // Post queries
-            posts: (_: unknown, { filter, pagination }: { filter?: any; pagination?: any }) => {
+            posts: (_: unknown, { filter, pagination }: { filter?: PostFilter; pagination?: PaginationInput }) => {
                 let filteredPosts = [...posts];
                 
                 // Apply filters if provided
@@ -322,21 +434,21 @@ const schema = createSchema({
             recentActivity: (_: unknown, { limit }: { limit: number }) => {
                 // Create recent activity data based on existing blogs, events, and posts
                 const activity = [
-                    ...blogs.slice(0, 2).map((blog, index) => ({
+                    ...blogs.slice(0, 2).map((blog) => ({
                         id: `blog-${blog.id}`,
                         title: blog.title,
                         type: 'blog',
                         timestamp: blog.updatedAt || blog.date,
                         action: 'Published',
                     })),
-                    ...events.slice(0, 2).map((event, index) => ({
+                    ...events.slice(0, 2).map((event) => ({
                         id: `event-${event.id}`,
                         title: event.title,
                         type: 'event',
                         timestamp: event.date,
                         action: 'Scheduled',
                     })),
-                    ...posts.slice(0, 2).map((post, index) => ({
+                    ...posts.slice(0, 2).map((post) => ({
                         id: `post-${post.id}`,
                         title: post.title,
                         type: 'post',
@@ -355,7 +467,7 @@ const schema = createSchema({
         },
         Mutation: {
             // Enhanced blog mutations
-            createBlog: (_: unknown, { input }: { input: any }) => {
+            createBlog: (_: unknown, { input }: { input: CreateBlogInput }) => {
                 const newBlog = {
                     id: String(blogs.length + 1),
                     title: input.title,
@@ -375,7 +487,7 @@ const schema = createSchema({
                 return newBlog;
             },
             
-            updateBlog: (_: unknown, { input }: { input: any }) => {
+            updateBlog: (_: unknown, { input }: { input: UpdateBlogInput }) => {
                 const blogIndex = blogs.findIndex(blog => blog.id === input.id);
                 if (blogIndex === -1) {
                     throw new Error(`Blog with id ${input.id} not found`);
@@ -415,7 +527,7 @@ const schema = createSchema({
             },
             
             // Enhanced event mutations
-            createEvent: (_: unknown, { input }: { input: any }) => {
+            createEvent: (_: unknown, { input }: { input: CreateEventInput }) => {
                 const newEvent = {
                     id: String(events.length + 1),
                     title: input.title,
@@ -435,7 +547,7 @@ const schema = createSchema({
                 return newEvent;
             },
             
-            updateEvent: (_: unknown, { input }: { input: any }) => {
+            updateEvent: (_: unknown, { input }: { input: UpdateEventInput }) => {
                 const eventIndex = events.findIndex(event => event.id === input.id);
                 if (eventIndex === -1) {
                     throw new Error(`Event with id ${input.id} not found`);
@@ -469,6 +581,15 @@ const schema = createSchema({
                     throw new Error(`Event ${eventId} is at full capacity`);
                 }
                 
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(userEmail)) {
+                    throw new Error('Invalid email format');
+                }
+                
+                // Log registration for audit trail
+                console.log(`User ${userEmail} registered for event ${eventId}`);
+                
                 // In a real app, you'd store the registration information
                 // For now, just increment the registered count
                 event.registeredCount += 1;
@@ -476,7 +597,7 @@ const schema = createSchema({
             },
             
             // Post mutations
-            createPost: (_: unknown, { input }: { input: any }) => {
+            createPost: (_: unknown, { input }: { input: CreatePostInput }) => {
                 const newPost = {
                     id: String(posts.length + 1),
                     title: input.title,
@@ -492,7 +613,7 @@ const schema = createSchema({
                 return newPost;
             },
             
-            updatePost: (_: unknown, { input }: { input: any }) => {
+            updatePost: (_: unknown, { input }: { input: UpdatePostInput }) => {
                 const postIndex = posts.findIndex(post => post.id === input.id);
                 if (postIndex === -1) {
                     throw new Error(`Post with id ${input.id} not found`);

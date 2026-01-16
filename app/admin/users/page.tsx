@@ -44,6 +44,10 @@ const GET_USERS = gql`
   }
 `;
 
+/**
+ * Admin users management page
+ * @returns {JSX.Element} Admin users page
+ */
 export default function AdminUsersPage() {
   const { data, loading, error } = useQuery<UsersData>(GET_USERS, {
     variables: {

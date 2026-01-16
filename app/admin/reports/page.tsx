@@ -42,6 +42,10 @@ const GET_REPORTS = gql`
   }
 `;
 
+/**
+ * Admin reports management page
+ * @returns {JSX.Element} Admin reports page
+ */
 export default function AdminReportsPage() {
   const { data, loading, error } = useQuery<ReportsData>(GET_REPORTS, {
     variables: {

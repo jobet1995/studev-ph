@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface SidebarItem {
   id: string;
@@ -25,6 +26,20 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   return (
     <div className={`bg-gradient-to-b from-gray-800 to-gray-900 text-white w-64 min-h-screen flex flex-col ${className}`}>
+      {/* Logo section */}
+      {logo && (
+        <div className="p-6 pb-2">
+          <div className="flex items-center justify-center mb-6">
+            <Image
+              src={logo}
+              alt={`${title} Logo`}
+              width={120}
+              height={40}
+              className="object-contain"
+            />
+          </div>
+        </div>
+      )}
       <nav className="flex-1 p-4 pt-4">
         <ul className="space-y-2">
           {items.map((item) => (

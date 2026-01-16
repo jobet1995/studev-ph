@@ -21,6 +21,10 @@ interface SystemStatus {
   version: string;
 }
 
+/**
+ * Admin login page
+ * @returns {JSX.Element} Admin login page
+ */
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
@@ -44,6 +48,7 @@ export default function LoginPage() {
           version: 'v1.2.0'
         });
       } catch (error) {
+        console.error('Failed to fetch system status:', error);
         setSystemStatus({
           status: 'offline',
           lastUpdated: new Date().toISOString(),
@@ -100,6 +105,7 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push('/admin/dashboard');
     } catch (error) {
+      console.error('Login failed:', error);
       setErrors({ general: 'Login failed. Please check your credentials.' });
     } finally {
       setIsLoading(false);
@@ -285,7 +291,7 @@ export default function LoginPage() {
         </div>
         
         <div className="text-center text-sm text-gray-500">
-          <p>Don't have an account?{' '}
+          <p>Don&apos;t have an account?{' '}
             <Link href="/admin/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
               Sign up
             </Link>
