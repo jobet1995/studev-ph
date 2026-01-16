@@ -127,7 +127,7 @@ export default function CalendarDemoPage() {
                 <h4 className="font-medium text-gray-700">Navigation</h4>
                 <ul className="text-sm text-gray-600 mt-2 space-y-1">
                   <li>• Previous/Next buttons</li>
-                  <li>• "Today" button</li>
+                  <li>• &quot;Today&quot; button</li>
                   <li>• View mode toggle</li>
                 </ul>
               </div>
