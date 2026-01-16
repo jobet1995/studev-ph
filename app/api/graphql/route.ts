@@ -652,4 +652,11 @@ const { handleRequest } = createYoga({
     },
 });
 
-export { handleRequest as GET, handleRequest as POST };
+// Wrap the GraphQL Yoga handler to match Next.js App Router expectations
+export async function GET(request: Request) {
+  return handleRequest(request, {});
+}
+
+export async function POST(request: Request) {
+  return handleRequest(request, {});
+}
