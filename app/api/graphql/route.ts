@@ -652,11 +652,23 @@ const { handleRequest } = createYoga({
     },
 });
 
+/**
+ * GraphQL API GET endpoint
+ * Handles GraphQL queries via GET requests
+ * @param {Request} request - Incoming HTTP request
+ * @returns {Promise<Response>} GraphQL response
+ */
 // Wrap the GraphQL Yoga handler to match Next.js App Router expectations
 export async function GET(request: Request) {
   return handleRequest(request, {});
 }
 
+/**
+ * GraphQL API POST endpoint
+ * Handles GraphQL mutations and queries via POST requests
+ * @param {Request} request - Incoming HTTP request
+ * @returns {Promise<Response>} GraphQL response
+ */
 export async function POST(request: Request) {
   return handleRequest(request, {});
 }
