@@ -14,6 +14,10 @@ const mockMediaFiles = [
   { id: '8', name: 'demo.mov', type: 'video', size: '120.4 MB', uploaded: '2023-04-20', url: '#' },
 ];
 
+/**
+ * Admin media library page component for managing uploaded files and assets
+ * @returns {JSX.Element} The admin media library page
+ */
 const MediaLibraryPage = () => {
   const [files, setFiles] = useState(mockMediaFiles);
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);

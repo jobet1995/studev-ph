@@ -2,6 +2,19 @@ import React from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 
+/**
+ * Admin layout component that provides a consistent structure with navbar and sidebar
+ * @param {LayoutProps} props - Component properties
+ * @param {string} props.title - Title for the navbar
+ * @param {string} props.sidebarTitle - Title for the sidebar
+ * @param {Array<{id: string, label: string, icon?: React.ReactNode, href?: string, onClick?: () => void}>} props.sidebarItems - Navigation items for the sidebar
+ * @param {string} [props.sidebarSelectedItem] - ID of the currently selected sidebar item
+ * @param {React.ReactNode} props.children - Child components to render in the main content area
+ * @param {{name: string, avatar?: string}} [props.user] - User information for the navbar
+ * @param {() => void} [props.onLogout] - Callback function for logout action
+ * @param {string} [props.logo] - Custom logo URL
+ * @returns {JSX.Element} The admin layout component
+ */
 interface LayoutProps {
   title: string;
   sidebarTitle: string;

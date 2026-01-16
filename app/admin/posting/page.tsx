@@ -56,6 +56,21 @@ const CREATE_POST = gql`
   }
 `;
 
+const UPDATE_POST = gql`
+  mutation UpdatePost($input: UpdatePostInput!) {
+    updatePost(input: $input) {
+      id
+      title
+      content
+      category
+      priority
+      author
+      createdAt
+      published
+    }
+  }
+`;
+
 const DELETE_POST = gql`
   mutation DeletePost($id: ID!) {
     deletePost(id: $id)
@@ -67,18 +82,18 @@ const DELETE_POST = gql`
  * @returns {JSX.Element} The admin posting page
  */
 export default function AdminPostingPage() {
-  const [activeTab, setActiveTab] = useState<'create' | 'view' | 'manage'>('create');
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    category: 'announcement',
-    priority: 'medium' as 'low' | 'medium' | 'high',
-    author: 'Admin'
-  });
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState('announcement');
+  const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [author, setAuthor] = useState('Admin');
+  const [published, setPublished] = useState(true);
 
   const { data, loading, error, refetch } = useQuery<PostsData>(GET_POSTS);
   const [createPost] = useMutation(CREATE_POST);
+  const [updatePost] = useMutation(UPDATE_POST);
   const [deletePost] = useMutation(DELETE_POST);
 
   const posts = data?.posts.items || [];
@@ -87,31 +102,49 @@ export default function AdminPostingPage() {
     e.preventDefault();
     
     try {
-      await createPost({
-        variables: {
-          input: {
-            title: formData.title,
-            content: formData.content,
-            category: formData.category,
-            priority: formData.priority,
-            author: formData.author,
-            published: true
+      if (editingPostId) {
+        // Update existing post
+        await updatePost({
+          variables: {
+            input: {
+              id: editingPostId,
+              title,
+              content,
+              category,
+              priority,
+              author,
+              published
+            }
           }
-        }
-      });
+        });
+      } else {
+        // Create new post
+        await createPost({
+          variables: {
+            input: {
+              title,
+              content,
+              category,
+              priority,
+              author,
+              published
+            }
+          }
+        });
+      }
       
       // Reset form and refresh data
-      setFormData({
-        title: '',
-        content: '',
-        category: 'announcement',
-        priority: 'medium',
-        author: 'Admin'
-      });
+      setTitle('');
+      setContent('');
+      setCategory('announcement');
+      setPriority('medium');
+      setAuthor('Admin');
+      setPublished(true);
       setShowForm(false);
+      setEditingPostId(null);
       refetch();
     } catch (error) {
-      console.error('Error creating post:', error);
+      console.error('Error saving post:', error);
     }
   };
 
@@ -124,6 +157,17 @@ export default function AdminPostingPage() {
         console.error('Error deleting post:', error);
       }
     }
+  };
+
+  const handleEditPost = (post: Post) => {
+    setTitle(post.title);
+    setContent(post.content);
+    setCategory(post.category);
+    setPriority(post.priority);
+    setAuthor(post.author);
+    setPublished(post.published);
+    setEditingPostId(post.id);
+    setShowForm(true);
   };
 
   if (loading) {
@@ -146,89 +190,51 @@ export default function AdminPostingPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quick Posts</h1>
-          <p className="text-gray-600 mt-2">Create and manage quick announcements and updates</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Manage Posts</h1>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            {showForm ? 'Cancel' : 'Add New Post'}
+          </button>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-        >
-          <svg className="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          {showForm ? 'Cancel' : 'New Post'}
-        </button>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('create')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'create'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Create Post
-          </button>
-          <button
-            onClick={() => setActiveTab('view')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'view'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            View Posts
-          </button>
-          <button
-            onClick={() => setActiveTab('manage')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'manage'
-                ? 'border-indigo-500 text-indigo-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Manage Posts
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'create' && (
-        <div className="bg-white shadow rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Create New Post</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Add Post Form */}
+      {showForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6 border border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">
+            {editingPostId ? 'Update Post' : 'Create New Post'}
+          </h2>
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="postTitle" className="block text-sm font-medium text-gray-700 mb-1">
                   Title *
                 </label>
                 <input
                   type="text"
-                  id="title"
+                  id="postTitle"
                   required
-                  value={formData.title}
-                  onChange={(e) => setFormData({...formData, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter post title"
                 />
               </div>
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
+                <label htmlFor="postCategory" className="block text-sm font-medium text-gray-700 mb-1">
+                  Category *
                 </label>
                 <select
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                  id="postCategory"
+                  required
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="announcement">Announcement</option>
                   <option value="update">Update</option>
@@ -238,14 +244,15 @@ export default function AdminPostingPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
-                  Priority
+                <label htmlFor="postPriority" className="block text-sm font-medium text-gray-700 mb-1">
+                  Priority *
                 </label>
                 <select
-                  id="priority"
-                  value={formData.priority}
-                  onChange={(e) => setFormData({...formData, priority: e.target.value as 'low' | 'medium' | 'high'})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                  id="postPriority"
+                  required
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as 'low' | 'medium' | 'high')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -253,190 +260,168 @@ export default function AdminPostingPage() {
                 </select>
               </div>
               <div>
-                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
-                  Author
+                <label htmlFor="postAuthor" className="block text-sm font-medium text-gray-700 mb-1">
+                  Author *
                 </label>
                 <input
                   type="text"
-                  id="author"
-                  value={formData.author}
-                  onChange={(e) => setFormData({...formData, author: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
+                  id="postAuthor"
+                  required
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Author name"
                 />
               </div>
+              <div className="md:col-span-2">
+                <label htmlFor="postContent" className="block text-sm font-medium text-gray-700 mb-1">
+                  Content *
+                </label>
+                <textarea
+                  id="postContent"
+                  rows={4}
+                  required
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Write your post content..."
+                />
+              </div>
+              <div className="flex items-center pt-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={published}
+                    onChange={(e) => setPublished(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Published</span>
+                </label>
+              </div>
             </div>
-            <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
-                Content *
-              </label>
-              <textarea
-                id="content"
-                required
-                rows={4}
-                value={formData.content}
-                onChange={(e) => setFormData({...formData, content: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
-                placeholder="Write your post content..."
-              />
-            </div>
-            <div className="flex justify-end space-x-3">
+            <div className="mt-6 flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingPostId(null);
+                  setTitle('');
+                  setContent('');
+                  setCategory('announcement');
+                  setPriority('medium');
+                  setAuthor('Admin');
+                  setPublished(true);
+                }}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                Create Post
+                {editingPostId ? 'Update Post' : 'Create Post'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* View Posts Tab */}
-      {activeTab === 'view' && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Posts</h2>
-            <p className="text-sm text-gray-500">{posts.length} posts</p>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
+      {/* Posts Table */}
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Title
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Category
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Priority
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Author
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Date
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
             {posts.length > 0 ? (
-              posts.map((post) => (
-                <div key={post.id} className="px-6 py-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-medium text-gray-900">{post.title}</h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          post.category === 'announcement' ? 'bg-blue-100 text-blue-800' :
-                          post.category === 'update' ? 'bg-green-100 text-green-800' :
-                          post.category === 'news' ? 'bg-purple-100 text-purple-800' :
-                          post.category === 'alert' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {post.category}
-                        </span>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          post.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          post.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {post.priority}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 mb-3">{post.content}</p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <span>By {post.author}</span>
-                        <span className="mx-2">•</span>
-                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                        <span className="mx-2">•</span>
-                        <span className={post.published ? 'text-green-600' : 'text-gray-400'}>
-                          {post.published ? 'Published' : 'Draft'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              posts.map((post, index) => (
+                <tr key={`${post.id}-${index}`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{post.title}</div>
+                    <div className="text-sm text-gray-500 truncate max-w-xs">{post.content.substring(0, 50)}{post.content.length > 50 ? '...' : ''}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      post.category === 'announcement' ? 'bg-blue-100 text-blue-800' :
+                      post.category === 'update' ? 'bg-green-100 text-green-800' :
+                      post.category === 'news' ? 'bg-purple-100 text-purple-800' :
+                      post.category === 'alert' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {post.category}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      post.priority === 'high' ? 'bg-red-100 text-red-800' :
+                      post.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {post.priority}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {post.author}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(post.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      post.published ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {post.published ? 'Published' : 'Draft'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button 
+                      onClick={() => handleEditPost(post)}
+                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(post.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
               ))
             ) : (
-              <div className="px-6 py-12 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No posts yet</h3>
-                <p className="mt-1 text-sm text-gray-500">Get started by creating a new post.</p>
-              </div>
+              <tr>
+                <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                  No posts found
+                </td>
+              </tr>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Manage Posts Tab */}
-      {activeTab === 'manage' && (
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Manage Posts</h2>
-            <p className="text-sm text-gray-500">Edit or delete existing posts</p>
-          </div>
-          
-          <div className="divide-y divide-gray-200">
-            {posts.length > 0 ? (
-              posts.map((post) => (
-                <div key={post.id} className="px-6 py-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-medium text-gray-900">{post.title}</h3>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          post.category === 'announcement' ? 'bg-blue-100 text-blue-800' :
-                          post.category === 'update' ? 'bg-green-100 text-green-800' :
-                          post.category === 'news' ? 'bg-purple-100 text-purple-800' :
-                          post.category === 'alert' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {post.category}
-                        </span>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          post.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          post.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {post.priority}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 mb-3">{post.content.substring(0, 100)}{post.content.length > 100 ? '...' : ''}</p>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <span>By {post.author}</span>
-                        <span className="mx-2">•</span>
-                        <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                        <span className="mx-2">•</span>
-                        <span className={post.published ? 'text-green-600' : 'text-gray-400'}>
-                          {post.published ? 'Published' : 'Draft'}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => {
-                          // TODO: Implement edit functionality
-                          alert('Edit functionality coming soon!');
-                        }}
-                        className="text-indigo-600 hover:text-indigo-800"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(post.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="px-6 py-12 text-center">
-                <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No posts to manage</h3>
-                <p className="mt-1 text-sm text-gray-500">Create some posts first.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

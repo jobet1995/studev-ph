@@ -31,6 +31,10 @@ const mockAnalyticsData = {
   ]
 };
 
+/**
+ * Admin analytics page component for tracking website performance and user engagement
+ * @returns {JSX.Element} The admin analytics page
+ */
 const AnalyticsPage = () => {
   const [dateRange, setDateRange] = useState('last7days');
 

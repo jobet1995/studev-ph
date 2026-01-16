@@ -30,6 +30,10 @@ interface NotificationSettings {
   };
 }
 
+/**
+ * Admin user settings page component for managing user account preferences
+ * @returns {JSX.Element} The admin user settings page
+ */
 const UserSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [userData, setUserData] = useState<UserData>({

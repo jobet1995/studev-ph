@@ -6,6 +6,14 @@ interface Tab {
   icon?: React.ReactNode;
 }
 
+/**
+ * Tabs component for switching between different content sections
+ * @param {TabsProps} props - Component properties
+ * @param {Tab[]} props.tabs - Array of tab objects
+ * @param {string} props.activeTab - ID of the currently active tab
+ * @param {(tabId: string) => void} props.onTabChange - Callback for tab change
+ * @returns {JSX.Element} The tabs component
+ */
 interface TabsProps {
   tabs: Tab[];
   activeTab: string;

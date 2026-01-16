@@ -17,6 +17,10 @@ interface SettingItem {
   description?: string;
 }
 
+/**
+ * Admin settings page component for managing application configuration
+ * @returns {JSX.Element} The admin settings page
+ */
 const SettingsPage = () => {
   const [activeCategory, setActiveCategory] = useState('general');
 

@@ -1,6 +1,14 @@
 import React from 'react';
 import Image from 'next/image';
 
+/**
+ * Admin navbar component that displays the page title and user information
+ * @param {NavbarProps} props - Component properties
+ * @param {string} props.title - Title to display in the navbar
+ * @param {{name: string, avatar?: string}} [props.user] - User information to display
+ * @param {() => void} [props.onLogout] - Callback function for logout action
+ * @returns {JSX.Element} The admin navbar component
+ */
 interface NavbarProps {
   title: string;
   user?: {

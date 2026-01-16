@@ -1,19 +1,76 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { gql } from '@apollo/client';
+import Image from 'next/image';
 import { useQuery } from '@apollo/client/react';
+import { gql } from '@apollo/client';
+
+interface Activity {
+  id: string;
+  user: string;
+  action: string;
+  target: string;
+  time: string;
+  avatar: string;
+}
+
+// Event interface is defined later after Post
+
+interface Engagement {
+  id: string;
+  type: string;
+  metric: string;
+  value: number;
+  change: number;
+}
+
+interface PipelineItem {
+  id: string;
+  title: string;
+  stage: string;
+  value: number;
+  owner: string;
+  deadline: string;
+}
 
 interface Blog {
   id: string;
   title: string;
   author: string;
   date: string;
-  published: boolean;
+  excerpt: string;
+  imageUrl: string;
 }
 
 interface Event {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  eventType: string;
+  attendees?: number;
+}
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  createdAt: string;
+  category: string;
+}
+
+// Define TypeScript interfaces for GraphQL response
+interface RecentActivity {
+  id: string;
+  title: string;
+  type: string;
+  timestamp: string;
+  action: string;
+}
+
+interface UpcomingEvent {
   id: string;
   title: string;
   date: string;
@@ -21,38 +78,40 @@ interface Event {
   eventType: string;
 }
 
+interface FeaturedBlog {
+  id: string;
+  title: string;
+  author: string;
+  date: string;
+  excerpt: string;
+  imageUrl: string;
+}
 
 interface DashboardStats {
   totalBlogs: number;
   publishedBlogs: number;
   totalEvents: number;
   totalUsers: number;
+  totalPosts: number;
 }
 
-interface RecentActivity {
-  id: string;
-  title: string;
-  type: 'blog' | 'event' | 'user';
-  timestamp: string;
-  action: string;
+interface PaginatedPosts {
+  items: Post[];
+  totalCount: number;
 }
 
-interface DashboardData {
-  dashboardStats: DashboardStats;
+interface GetDashboardDataQuery {
   recentActivity: RecentActivity[];
-  featuredBlogs: Blog[];
-  upcomingEvents: Event[];
+  upcomingEvents: UpcomingEvent[];
+  featuredBlogs: FeaturedBlog[];
+  posts: PaginatedPosts;
+  dashboardStats: DashboardStats;
 }
 
 // GraphQL query to fetch dashboard data
 const GET_DASHBOARD_DATA = gql`
   query GetDashboardData {
-    dashboardStats {
-      totalBlogs
-      publishedBlogs
-      totalEvents
-      totalUsers
-    }
+    # Recent activities (could be from user actions)
     recentActivity(limit: 5) {
       id
       title
@@ -60,47 +119,161 @@ const GET_DASHBOARD_DATA = gql`
       timestamp
       action
     }
-    featuredBlogs(limit: 5) {
-      id
-      title
-      author
-      date
-    }
-    upcomingEvents(limit: 5) {
+    
+    # Upcoming events
+    upcomingEvents(limit: 4) {
       id
       title
       date
       location
+      eventType
+    }
+    
+    # Recent blogs
+    featuredBlogs(limit: 4) {
+      id
+      title
+      author
+      date
+      excerpt
+      imageUrl
+    }
+    
+    # Recent posts
+    posts(pagination: { page: 1, limit: 4 }) {
+      items {
+        id
+        title
+        content
+        author
+        createdAt
+        category
+      }
+      totalCount
+    }
+    
+    # Dashboard statistics
+    dashboardStats {
+      totalBlogs
+      publishedBlogs
+      totalEvents
+      totalUsers
+      totalPosts
     }
   }
 `;
 
 /**
- * Admin dashboard page showing statistics and recent activity
- * @returns {JSX.Element} Admin dashboard page
+ * Admin dashboard page component displaying summary statistics and recent activities
+ * @returns {JSX.Element} The admin dashboard page
  */
-export default function AdminDashboard() {
-  const [currentTime, setCurrentTime] = useState<string>('');
+const DashboardPage = () => {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [engagements, setEngagements] = useState<Engagement[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineItem[]>([]);
   
-  // Use Apollo Client to fetch dashboard data
-  const { data, loading, error } = useQuery<DashboardData>(GET_DASHBOARD_DATA);
+  // Define type for stats
+  type Stat = {
+    id: number;
+    name: string;
+    value: string;
+    change: string;
+    changeType: 'positive' | 'negative' | 'neutral';
+  };
+  
+  // Stats for the summary cards
+  const [stats, setStats] = useState<Stat[]>([
+    { id: 1, name: 'Active Members', value: '...', change: '', changeType: 'neutral' },
+    { id: 2, name: 'Volunteers', value: '...', change: '', changeType: 'neutral' },
+    { id: 3, name: 'Pending Tasks', value: '...', change: '', changeType: 'neutral' },
+    { id: 4, name: 'Community Impact', value: '...', change: '', changeType: 'neutral' },
+  ]);
 
-  // Update current time every minute
+  // This function is now replaced by GraphQL query via useQuery hook
+  // The data will be fetched automatically by the useQuery hook
+  
+  // Use GraphQL to fetch dashboard data
+  const { data, loading, error } = useQuery<GetDashboardDataQuery>(GET_DASHBOARD_DATA);
+  
+  // Update state when data is loaded
   useEffect(() => {
-    const updateCurrentTime = () => {
-      setCurrentTime(new Date().toLocaleString());
-    };
+    if (data) {
+      // Map GraphQL data to local state
+      setStats([
+        { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
+        { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
+        { id: 3, name: 'Total Events', value: data.dashboardStats.totalEvents.toString(), change: '', changeType: 'neutral' as const },
+        { id: 4, name: 'Total Posts', value: data.dashboardStats.totalPosts.toString(), change: '', changeType: 'neutral' as const },
+      ]);
+      
+      // Map recent activities
+      setActivities(data.recentActivity.map((activity) => ({
+        id: activity.id,
+        user: activity.title,
+        action: activity.action,
+        target: activity.type,
+        time: activity.timestamp,
+        avatar: 'https://placehold.co/40x40?text=U' // Default avatar
+      })));
+      
+      // Map events
+      setEvents(data.upcomingEvents.map((event) => ({
+        id: event.id,
+        title: event.title,
+        date: event.date,
+        time: '', // No time in GraphQL schema, set as empty
+        location: event.location,
+        eventType: event.eventType,
+        attendees: 0 // No attendees in GraphQL response, default to 0
+      })));
+      
+      // Map posts for pipeline section (similar to how events are handled)
+      setPipeline(data.posts.items.map((post, index) => ({
+        id: post.id,
+        title: post.title,
+        stage: 'Published',
+        value: index + 10, // Some arbitrary value
+        owner: post.author,
+        deadline: post.createdAt
+      })));
+      
+      // Set engagements based on stats
+      setEngagements([
+        {
+          id: '1',
+          type: 'Blog Engagement',
+          metric: 'Total Blogs',
+          value: data.dashboardStats.totalBlogs,
+          change: 0
+        },
+        {
+          id: '2',
+          type: 'Event Engagement',
+          metric: 'Total Events',
+          value: data.dashboardStats.totalEvents,
+          change: 0
+        },
+        {
+          id: '3',
+          type: 'Post Engagement',
+          metric: 'Total Posts',
+          value: data.dashboardStats.totalPosts,
+          change: 0
+        },
+        {
+          id: '4',
+          type: 'User Engagement',
+          metric: 'Total Users',
+          value: data.dashboardStats.totalUsers,
+          change: 0
+        }
+      ]);
+    }
+  }, [data]);
 
-    // Set initial time
-    updateCurrentTime();
 
-    // Update time every minute
-    const timeInterval = setInterval(updateCurrentTime, 60000);
 
-    return () => clearInterval(timeInterval);
-  }, []);
-
-  // Show loading spinner if data is still loading
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -109,15 +282,12 @@ export default function AdminDashboard() {
     );
   }
 
-  // Handle errors
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Data</h2>
-          <p className="text-gray-600">
-            {error.message}
-          </p>
+          <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
+          <p className="text-gray-600">{error.message || 'An error occurred while loading dashboard data.'}</p>
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
@@ -128,202 +298,263 @@ export default function AdminDashboard() {
       </div>
     );
   }
-
-  const stats = data?.dashboardStats;
-  const recentActivities = data?.recentActivity || [];
-
+  
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">Admin Dashboard</h1>
-              <p className="text-sm text-gray-500">Welcome back! Last login: {currentTime}</p>
+    <div className="w-full">
+      {/* Dashboard Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-gray-600 mt-2">Welcome back! Here&#39;s what&#39;s happening today.</p>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {stats.map((stat) => (
+          <div key={stat.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <p className="text-sm font-medium text-gray-500">{stat.name}</p>
+            <div className="mt-2 flex items-baseline">
+              <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
+              {stat.change && (
+                <p className={`ml-2 text-sm font-medium ${stat.changeType === 'positive' ? 'text-green-600' : stat.changeType === 'negative' ? 'text-red-600' : 'text-gray-500'}`}>
+                  {stat.change}
+                </p>
+              )}
             </div>
-            <div className="text-sm text-gray-500">
-              {currentTime}
+          </div>
+        ))}
+      </div>
+
+      {/* Main Dashboard Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pipeline Section */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Pipeline</h2>
+                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                  View All
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Initiative
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Participants
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Owner
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Deadline
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {pipeline.length > 0 ? (
+                    pipeline.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            item.stage === 'Completed' ? 'bg-green-100 text-green-800' :
+                            item.stage === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                            item.stage === 'Review' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {item.stage}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {item.value.toLocaleString()} people
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.owner}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {item.deadline}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                        No pipeline data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="bg-indigo-100 p-3 rounded-lg">
-                  <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Blogs</dt>
-                  <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats?.totalBlogs || 0}</dd>
-                </div>
-              </div>
+        {/* Activities Section */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-6 py-5 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Recent Activities</h2>
+              <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                View All
+              </button>
             </div>
           </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
+          <div className="divide-y divide-gray-200">
+            {activities.length > 0 ? (
+              activities.map((activity) => (
+                <div key={activity.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-start">
+                    <Image
+                      className="h-10 w-10 rounded-full"
+                      src={activity.avatar}
+                      alt={`${activity.user} avatar`}
+                      width={40}
+                      height={40}
+                    />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.user} <span className="font-normal text-gray-700">{activity.action}</span> {activity.target}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <dt className="text-sm font-medium text-gray-500 truncate">Published</dt>
-                  <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats?.publishedBlogs || 0}</dd>
-                </div>
+              ))
+            ) : (
+              <div className="p-6 text-center text-gray-500">
+                No recent activities
               </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Events</dt>
-                  <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats?.totalEvents || 0}</dd>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white overflow-hidden shadow rounded-lg">
-            <div className="px-4 py-5 sm:p-6">
-              <div className="flex items-center">
-                <div className="bg-yellow-100 p-3 rounded-lg">
-                  <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <div className="ml-4">
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
-                  <dd className="mt-1 text-3xl font-semibold text-gray-900">{stats?.totalUsers || 0}</dd>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Activity */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Recent Activity</h3>
-              <p className="mt-1 text-sm text-gray-500">Latest actions in the system</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Events Section */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Upcoming Events</h2>
+                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                  View Calendar
+                </button>
+              </div>
             </div>
-            <ul className="divide-y divide-gray-200">
-              {recentActivities.length > 0 ? (
-                recentActivities.map((activity) => (
-                  <li key={activity.id} className="px-4 py-4 sm:px-6">
-                    <div className="flex items-center">
-                      <div className={`mr-4 p-2 rounded-full ${
-                        activity.type === 'blog' ? 'bg-green-100' : 
-                        activity.type === 'event' ? 'bg-blue-100' : 'bg-indigo-100'
-                      }`}>
-                        {activity.type === 'blog' ? (
-                          <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                          </svg>
-                        ) : activity.type === 'event' ? (
-                          <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        ) : (
-                          <svg className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        )}
+            <div className="divide-y divide-gray-200">
+              {events.length > 0 ? (
+                events.map((event) => (
+                  <div key={event.id} className="p-6 hover:bg-gray-50">
+                    <div className="flex items-start">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                        <span className="text-sm font-semibold text-indigo-700">
+                          {new Date(event.date).getDate()}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{activity.title}</p>
-                        <p className="text-sm text-gray-500">{activity.action} • {new Date(activity.timestamp).toLocaleString()}</p>
+                      <div className="ml-4">
+                        <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {event.date} • {event.time}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {event.location} • {event.eventType}
+                        </p>
                       </div>
                     </div>
-                  </li>
+                  </div>
                 ))
               ) : (
-                <li className="px-4 py-4 sm:px-6 text-center text-gray-500">
-                  No recent activity available
-                </li>
+                <div className="p-6 text-center text-gray-500">
+                  No upcoming events
+                </div>
               )}
-            </ul>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
-              <p className="mt-1 text-sm text-gray-500">Manage content and users</p>
+          {/* Postings Section */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Recent Postings</h2>
+                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                  View All
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4 p-6">
-              <Link 
-                href="/admin/blogs" 
-                className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="bg-indigo-100 p-3 rounded-full mb-3">
-                  <svg className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
+            <div className="divide-y divide-gray-200">
+              {(data?.posts?.items || []).length > 0 ? (
+                (data?.posts?.items || []).map((post) => (
+                  <div key={post.id} className="p-6 hover:bg-gray-50">
+                    <div className="ml-4">
+                      <h3 className="text-sm font-medium text-gray-900">{post.title}</h3>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {post.category} • By {post.author}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(post.createdAt).toLocaleDateString()} • {post.content.substring(0, 50)}...
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  No recent postings
                 </div>
-                <h4 className="text-lg font-medium text-gray-900">Manage Blogs</h4>
-                <p className="text-sm text-gray-500 mt-1">View and edit blog posts</p>
-              </Link>
-              
-              <Link 
-                href="/admin/events" 
-                className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="bg-blue-100 p-3 rounded-full mb-3">
-                  <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h4 className="text-lg font-medium text-gray-900">Manage Events</h4>
-                <p className="text-sm text-gray-500 mt-1">View and edit events</p>
-              </Link>
-              
-              <Link 
-                href="/admin/users" 
-                className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="bg-green-100 p-3 rounded-full mb-3">
-                  <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                </div>
-                <h4 className="text-lg font-medium text-gray-900">Manage Users</h4>
-                <p className="text-sm text-gray-500 mt-1">View and manage users</p>
-              </Link>
-              
-              <Link 
-                href="/admin/reports" 
-                className="flex flex-col items-center justify-center p-6 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <div className="bg-yellow-100 p-3 rounded-full mb-3">
-                  <svg className="h-6 w-6 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                </div>
-                <h4 className="text-lg font-medium text-gray-900">Reports</h4>
-                <p className="text-sm text-gray-500 mt-1">View system reports</p>
-              </Link>
+              )}
             </div>
           </div>
         </div>
-      </main>
+
+        {/* Engagements Section */}
+        <div className="lg:col-span-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Engagements</h2>
+                <button className="text-sm font-medium text-indigo-600 hover:text-indigo-800">
+                  View Analytics
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {engagements.length > 0 ? (
+                  engagements.map((engagement) => (
+                    <div key={engagement.id} className="bg-gray-50 p-5 rounded-lg">
+                      <h3 className="text-sm font-medium text-gray-900">{engagement.type}</h3>
+                      <div className="mt-2 flex items-baseline">
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {engagement.metric.includes('Rate') ? `${engagement.value}%` : engagement.value.toLocaleString()}
+                        </p>
+                        <p className={`ml-2 text-sm font-medium ${
+                          engagement.change >= 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {engagement.change >= 0 ? '+' : ''}{engagement.change}%
+                        </p>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{engagement.metric}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No engagement data available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default DashboardPage;

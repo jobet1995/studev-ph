@@ -1,5 +1,13 @@
 import React from 'react';
 
+/**
+ * Admin layout component with title and content area
+ * @param {AdminLayoutProps} props - Component properties
+ * @param {React.ReactNode} props.children - Content to display in the layout
+ * @param {string} props.title - Title for the layout
+ * @param {string} [props.subtitle] - Optional subtitle
+ * @returns {JSX.Element} The admin layout component
+ */
 interface AdminLayoutProps {
   children: React.ReactNode;
   title: string;

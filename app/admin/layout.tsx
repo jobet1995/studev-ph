@@ -285,13 +285,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             >
                               Account Settings
                             </Link>
-                            <a 
-                              href="#" 
+                            <Link 
+                              href="/admin/accountsecurity"
                               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                               role="menuitem"
                             >
                               Account Security
-                            </a>
+                            </Link>
                             <div className="border-t border-gray-200 my-1"></div>
                             <button
                               onClick={handleLogout}

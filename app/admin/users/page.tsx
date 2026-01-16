@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+
 import { gql } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import Link from 'next/link';

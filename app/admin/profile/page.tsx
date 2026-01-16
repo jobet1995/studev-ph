@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 // Define TypeScript interfaces
 interface UserProfile {
@@ -29,6 +30,10 @@ interface FormData {
   avatar: File | null;
 }
 
+/**
+ * Admin profile page component for viewing and editing user profile information
+ * @returns {JSX.Element} The admin profile page
+ */
 const ProfilePage = () => {
   // Mock user data - in a real app, this would come from an API or context
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -48,7 +53,7 @@ const ProfilePage = () => {
           
         // For demonstration purposes, we'll simulate a successful response
         // but without hardcoded mock data
-        const userData = await new Promise<any>((resolve) => {
+        const userData = await new Promise<{[key: string]: unknown}>((resolve) => {
           setTimeout(() => {
             resolve({}); // Return an empty object or a partial response
           }, 500);
@@ -56,21 +61,25 @@ const ProfilePage = () => {
           
         // Process the received user data
         const processedProfile: UserProfile = {
-          id: userData.id || '',
-          firstName: userData.firstName || '',
-          lastName: userData.lastName || '',
-          email: userData.email || '',
-          position: userData.position || '',
-          bio: userData.bio || '',
-          avatar: userData.avatar || '',
-          createdAt: userData.createdAt || new Date().toISOString(),
+          id: (userData.id as string) || '',
+          firstName: (userData.firstName as string) || '',
+          lastName: (userData.lastName as string) || '',
+          email: (userData.email as string) || '',
+          position: (userData.position as string) || '',
+          role: (userData.role as string) || '',
+          bio: (userData.bio as string) || '',
+          timezone: (userData.timezone as string) || 'Asia/Manila',
+          language: (userData.language as string) || 'en',
+          avatar: (userData.avatar as string) || '',
+          createdAt: (userData.createdAt as string) || new Date().toISOString(),
         };
           
         setUserProfile(processedProfile);
         setLoading(false);
-      } catch (err) {
+      } catch (err: unknown) {
         setError('Failed to load profile data');
         setLoading(false);
+        console.error('Error loading profile:', err);
       }
     };
       
@@ -119,7 +128,8 @@ const ProfilePage = () => {
   // Populate form when data loads
   useEffect(() => {
     if (userProfile && !isEditing) {
-      setFormData({
+      setFormData(prevFormData => ({
+        ...prevFormData,
         firstName: userProfile.firstName || '',
         lastName: userProfile.lastName || '',
         email: userProfile.email || '',
@@ -129,7 +139,7 @@ const ProfilePage = () => {
         timezone: userProfile.timezone || 'Asia/Manila',
         language: userProfile.language || 'en',
         avatar: null
-      });
+      }));
     }
   }, [userProfile, isEditing]);
   
@@ -208,8 +218,8 @@ const ProfilePage = () => {
       }
       
       setIsEditing(false);
-    } catch (err) {
-      console.error('Error updating profile:', err);
+    } catch (_err) {
+      console.error('Error updating profile:', _err);
       setError('Failed to update profile. Please try again.');
     }
   };
@@ -267,9 +277,11 @@ const ProfilePage = () => {
           <div className="absolute inset-0 bg-black bg-opacity-10"></div>
           <div className="relative flex flex-col md:flex-row items-center">
             <div className="relative mb-4 md:mb-0 md:mr-6">
-              <img 
+              <Image 
                 src={userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
                 alt="User Avatar"
+                width={150}
+                height={150}
                 className="w-32 h-32 rounded-full object-cover border-2 border-indigo-200 shadow-lg"
               />
               <div className="absolute bottom-2 right-2 bg-green-500 rounded-full p-1.5 border-2 border-white">
@@ -445,9 +457,11 @@ const ProfilePage = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-4 pb-2 border-b border-gray-200">Profile Picture</h3>
                   <div className="flex items-center mb-6">
                     <div className="mr-6">
-                      <img
+                      <Image
                         src={formData.avatar ? URL.createObjectURL(formData.avatar) : userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
                         alt="Profile Preview"
+                        width={150}
+                        height={150}
                         className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 shadow-sm"
                       />
                     </div>
@@ -618,9 +632,11 @@ const ProfilePage = () => {
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <h3 className="text-sm font-medium text-gray-500 mb-3">Profile Picture</h3>
                     <div className="flex items-center">
-                      <img 
+                      <Image 
                         src={userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
                         alt="User Avatar"
+                        width={150}
+                        height={150}
                         className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 shadow-md"
                       />
                     </div>

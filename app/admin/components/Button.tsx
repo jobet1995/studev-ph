@@ -1,5 +1,17 @@
 import React from 'react';
 
+/**
+ * Custom button component with multiple variants and sizes
+ * @param {ButtonProps} props - Component properties
+ * @param {React.ReactNode} props.children - Button content
+ * @param {() => void} [props.onClick] - Click handler function
+ * @param {'primary' | 'secondary' | 'danger' | 'ghost'} [props.variant='primary'] - Button variant
+ * @param {'sm' | 'md' | 'lg'} [props.size='md'] - Button size
+ * @param {boolean} [props.disabled=false] - Whether the button is disabled
+ * @param {'button' | 'submit' | 'reset'} [props.type='button'] - Button type attribute
+ * @param {string} [props.className] - Additional CSS classes
+ * @returns {JSX.Element} The button component
+ */
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;

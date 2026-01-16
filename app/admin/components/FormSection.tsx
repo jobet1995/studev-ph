@@ -1,5 +1,13 @@
 import React from 'react';
 
+/**
+ * Form section component for organizing form content
+ * @param {FormSectionProps} props - Component properties
+ * @param {string} props.title - Title for the form section
+ * @param {string} [props.description] - Optional description for the form section
+ * @param {React.ReactNode} props.children - Form content to display
+ * @returns {JSX.Element} The form section component
+ */
 interface FormSectionProps {
   title: string;
   description?: string;

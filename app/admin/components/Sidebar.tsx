@@ -9,6 +9,16 @@ interface SidebarItem {
   onClick?: () => void;
 }
 
+/**
+ * Admin sidebar component for navigation
+ * @param {SidebarProps} props - Component properties
+ * @param {string} props.title - Title for the sidebar
+ * @param {SidebarItem[]} props.items - Navigation items to display
+ * @param {string} [props.selectedItem] - ID of the currently selected item
+ * @param {string} [props.logo] - Custom logo URL
+ * @param {string} [props.className] - Additional CSS classes
+ * @returns {JSX.Element} The admin sidebar component
+ */
 interface SidebarProps {
   title: string;
   items: SidebarItem[];
