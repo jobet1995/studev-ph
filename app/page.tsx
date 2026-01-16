@@ -10,6 +10,8 @@
  * Ver                    Date                    Author                  Modification
  * 1.0                    12-23-20254             Jobet P. Casquejo       Initial Version
  */
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { ApolloWrapper } from "./components/apollo-wrapper";
