@@ -276,15 +276,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                               role="menuitem"
                             >
-                              Your Profile
+                              View Profile
                             </Link>
-                            <a 
-                              href="#" 
+                            <Link 
+                              href="/admin/usersettings"
                               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                               role="menuitem"
                             >
-                              Settings
-                            </a>
+                              Account Settings
+                            </Link>
                             <a 
                               href="#" 
                               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"

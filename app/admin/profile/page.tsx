@@ -11,6 +11,8 @@ interface UserProfile {
   position: string;
   role?: string;
   bio?: string;
+  timezone?: string;
+  language?: string;
   avatar?: string;
   createdAt: string;
 }
@@ -22,6 +24,8 @@ interface FormData {
   position: string;
   role: string;
   bio: string;
+  timezone: string;
+  language: string;
   avatar: File | null;
 }
 
@@ -81,7 +85,9 @@ const ProfilePage = () => {
     position: '',
     role: '',
     bio: '',
-    avatar: null
+    timezone: 'Asia/Manila',
+    language: 'en',
+    avatar: null,
   });
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
 
@@ -120,6 +126,8 @@ const ProfilePage = () => {
         position: userProfile.position || '',
         role: userProfile.role || '',
         bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Manila',
+        language: userProfile.language || 'en',
         avatar: null
       });
     }
@@ -189,6 +197,8 @@ const ProfilePage = () => {
         position: formData.position,
         role: formData.role,
         bio: formData.bio,
+        timezone: formData.timezone,
+        language: formData.language,
         avatar: newAvatarUrl
       });
       
@@ -215,6 +225,8 @@ const ProfilePage = () => {
         position: userProfile.position || '',
         role: userProfile.role || '',
         bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Manila',
+        language: userProfile.language || 'en',
         avatar: null
       });
     }
@@ -309,9 +321,10 @@ const ProfilePage = () => {
                     name="firstName"
                     value={formData.firstName}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 ${
+                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black ${
                       formErrors.firstName ? 'border-red-500' : 'border-gray-300'
                     }`}
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   />
                   {formErrors.firstName && (
                     <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -333,9 +346,10 @@ const ProfilePage = () => {
                     name="lastName"
                     value={formData.lastName}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 ${
+                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black ${
                       formErrors.lastName ? 'border-red-500' : 'border-gray-300'
                     }`}
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   />
                   {formErrors.lastName && (
                     <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -357,9 +371,10 @@ const ProfilePage = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 ${
+                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black ${
                       formErrors.email ? 'border-red-500' : 'border-gray-300'
                     }`}
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   />
                   {formErrors.email && (
                     <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -381,9 +396,10 @@ const ProfilePage = () => {
                     name="position"
                     value={formData.position}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 ${
+                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black ${
                       formErrors.position ? 'border-red-500' : 'border-gray-300'
                     }`}
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   />
                   {formErrors.position && (
                     <p className="mt-2 text-sm text-red-600 flex items-center">
@@ -404,9 +420,10 @@ const ProfilePage = () => {
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
-                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-gray-900 ${
+                    className={`w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black ${
                       formErrors.role ? 'border-red-500' : 'border-gray-300'
                     }`}
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   >
                     <option value="" className="text-gray-500">Select a role</option>
                     <option value="Administrator">Administrator</option>
@@ -460,8 +477,49 @@ const ProfilePage = () => {
                     value={formData.bio}
                     onChange={handleChange}
                     rows={4}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black"
+                    style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  <div>
+                    <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2">
+                      Timezone
+                    </label>
+                    <select
+                      id="timezone"
+                      name="timezone"
+                      value={formData.timezone}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black"
+                      style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
+                    >
+                      <option value="Asia/Manila">(GMT+08:00) Philippines Time</option>
+                      <option value="UTC">(GMT+00:00) UTC</option>
+                      <option value="America/New_York">(GMT-05:00) Eastern Time</option>
+                      <option value="Asia/Tokyo">(GMT+09:00) Japan Standard Time</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-2">
+                      Language
+                    </label>
+                    <select
+                      id="language"
+                      name="language"
+                      value={formData.language}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 text-black"
+                      style={{ color: '#000000 !important', backgroundColor: '#ffffff !important' }}
+                    >
+                      <option value="en">English</option>
+                      <option value="tl">Tagalog</option>
+                      <option value="zh">Chinese</option>
+                      <option value="hil">Hiligaynon</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -574,6 +632,34 @@ const ProfilePage = () => {
                       <p className="text-gray-900">
                         {userProfile?.bio || 'No bio provided.'}
                       </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Preferences</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Timezone:</span>
+                        <span className="text-gray-900 font-medium">
+                          {userProfile?.timezone === 'Asia/Manila' && '(GMT+08:00) Philippines Time'}
+                          {userProfile?.timezone === 'UTC' && '(GMT+00:00) UTC'}
+                          {userProfile?.timezone === 'America/New_York' && '(GMT-05:00) Eastern Time'}
+                          {userProfile?.timezone === 'Asia/Tokyo' && '(GMT+09:00) Japan Standard Time'}
+                          {!userProfile?.timezone && 'Not set'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Language:</span>
+                        <span className="text-gray-900 font-medium">
+                          {userProfile?.language === 'en' && 'English'}
+                          {userProfile?.language === 'tl' && 'Tagalog'}
+                          {userProfile?.language === 'zh' && 'Chinese'}
+                          {userProfile?.language === 'hil' && 'Hiligaynon'}
+                          {!userProfile?.language && 'Not set'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
