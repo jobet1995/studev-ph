@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
 import Link from 'next/link';
 
 interface Report {
@@ -13,78 +11,27 @@ interface Report {
   status: string;
 }
 
-interface ReportsData {
-  reports: {
-    items: Report[];
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    currentPage: number;
-  };
-}
-
-// GraphQL query to fetch reports
-const GET_REPORTS = gql`
-  query GetReports($pagination: PaginationInput) {
-    reports(pagination: $pagination) {
-      items {
-        id
-        title
-        type
-        date
-        status
-      }
-      totalCount
-      hasNextPage
-      hasPreviousPage
-      currentPage
-    }
-  }
-`;
+// Mock data for reports
+const mockReports: Report[] = [
+  { id: '1', title: 'Monthly Analytics Report', type: 'Analytics', date: '2023-05-15', status: 'completed' },
+  { id: '2', title: 'User Engagement Summary', type: 'Engagement', date: '2023-05-10', status: 'completed' },
+  { id: '3', title: 'Content Performance Report', type: 'Performance', date: '2023-05-08', status: 'processing' },
+  { id: '4', title: 'Security Audit Report', type: 'Security', date: '2023-05-05', status: 'scheduled' },
+  { id: '5', title: 'Revenue Analysis Q2', type: 'Finance', date: '2023-05-01', status: 'completed' },
+  { id: '6', title: 'Traffic Sources Overview', type: 'Traffic', date: '2023-04-28', status: 'pending' },
+];
 
 /**
  * Admin reports management page
  * @returns {JSX.Element} Admin reports page
  */
 export default function AdminReportsPage() {
-  const { data, loading, error } = useQuery<ReportsData>(GET_REPORTS, {
-    variables: {
-      pagination: { page: 1, limit: 10 }
-    }
-  });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const reports = data?.reports.items || [];
-
-  const filteredReports = reports.filter(report =>
+  const filteredReports = mockReports.filter(report =>
     report.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     report.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Reports</h2>
-          <p className="text-gray-600">{error.message}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

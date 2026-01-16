@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from 'react';
-import Layout from '../components/Layout';
 
 // Mock data for media files
 const mockMediaFiles = [
@@ -79,25 +78,8 @@ const MediaLibraryPage = () => {
     }
   };
 
-  const sidebarItems = [
-    { id: 'dashboard', label: 'Dashboard', href: '/admin' },
-    { id: 'analytics', label: 'Analytics', href: '/admin/analytics' },
-    { id: 'media', label: 'Media Library', href: '/admin/media' },
-    { id: 'create', label: 'Create Content', href: '/admin#create' },
-    { id: 'manage', label: 'Manage Content', href: '/admin#manage' },
-    { id: 'users', label: 'Users', href: '/admin/users' },
-    { id: 'settings', label: 'Settings', href: '/admin/settings' },
-  ];
-
   return (
-    <Layout 
-      title="Admin Dashboard" 
-      sidebarTitle="StuDev Admin" 
-      sidebarItems={sidebarItems}
-      sidebarSelectedItem="media"
-      user={{ name: 'Admin User', avatar: undefined }}
-      onLogout={() => alert('Logout functionality would go here')}
-    >
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Media Library</h1>
         <p className="text-gray-800">Manage your uploaded files and media assets</p>
@@ -221,7 +203,7 @@ const MediaLibraryPage = () => {
           </div>
         </div>
       )}
-    </Layout>
+    </div>
   );
 };
 

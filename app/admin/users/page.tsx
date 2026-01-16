@@ -54,15 +54,7 @@ export default function AdminUsersPage() {
       pagination: { page: 1, limit: 10 }
     }
   });
-  const [searchTerm, setSearchTerm] = useState('');
-
   const users = data?.users.items || [];
-
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -98,15 +90,6 @@ export default function AdminUsersPage() {
         </button>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search users..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
@@ -133,8 +116,8 @@ export default function AdminUsersPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
+            {users.length > 0 ? (
+              users.map((user) => (
                 <tr key={user.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{user.name}</div>

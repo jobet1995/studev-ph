@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
@@ -69,8 +69,6 @@ export default function AdminBlogsPage() {
   
   const [createBlog] = useMutation(CREATE_BLOG, {
     onCompleted: () => {
-      // Refetch the blogs after successful creation
-      refetch();
       // Reset form
       setTitle('');
       setAuthor('');
@@ -80,13 +78,15 @@ export default function AdminBlogsPage() {
       setPublished(true);
       setFeatured(false);
       setShowForm(false);
+      // Refetch to update the list
+      refetch();
     },
     onError: (error) => {
       console.error('Error creating blog:', error);
     }
   });
   
-  const [searchTerm, setSearchTerm] = useState('');
+
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [author, setAuthor] = useState('');
@@ -95,13 +95,19 @@ export default function AdminBlogsPage() {
   const [tags, setTags] = useState('');
   const [published, setPublished] = useState(true);
   const [featured, setFeatured] = useState(false);
+  
+  // State for date sorting
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  const blogs = useMemo(() => {
+    return [...(data?.blogs.items || [])].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [data?.blogs.items, sortOrder]);
 
-  const blogs = data?.blogs.items || [];
 
-  const filteredBlogs = blogs.filter(blog =>
-    blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    blog.author.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (loading) {
     return (
@@ -132,23 +138,28 @@ export default function AdminBlogsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Manage Blogs</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-        >
-          {showForm ? 'Cancel' : 'Add New Blog'}
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowForm(!showForm)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+          >
+            {showForm ? 'Cancel' : 'Add New Blog'}
+          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Sort by:</span>
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <input
-          type="text"
-          placeholder="Search blogs..."
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+
 
       {/* Add Blog Form */}
       {showForm && (
@@ -297,8 +308,8 @@ export default function AdminBlogsPage() {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredBlogs.length > 0 ? (
-              filteredBlogs.map((blog) => (
+            {blogs.length > 0 ? (
+              blogs.map((blog) => (
                 <tr key={blog.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{blog.title}</div>

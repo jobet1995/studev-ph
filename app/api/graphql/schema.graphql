@@ -260,6 +260,7 @@ type Query {
   # User queries
   users(filter: UserFilter, pagination: PaginationInput): PaginatedUsers!
   user(id: ID!): User
+  profile: User
   
   # Post queries
   posts(filter: PostFilter, pagination: PaginationInput): PaginatedPosts!

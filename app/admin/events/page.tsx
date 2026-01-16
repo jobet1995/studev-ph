@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { gql } from '@apollo/client';
 import { useQuery, useMutation } from '@apollo/client/react';
 import ModalMessage from '../components/ModalMessage';
@@ -95,14 +95,19 @@ export default function AdminEventsPage() {
     type: "success" as "success" | "error" | "warning" | "info"
   });
   
+
+  
   // State for editing
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   
-  // State for calendar view
+  // State for calendar view (table view is default)
   const [showCalendar, setShowCalendar] = useState(false);
   
-  // State for showing table (opposite of calendar)
-  const showTable = !showCalendar;
+  // State for showing table (default view)
+  const showTable = true;
+  
+  // State for date sorting
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Convert GraphQL events to calendar events
   const calendarEvents: CalendarEvent[] = (data?.events.items || []).map(event => ({
@@ -115,8 +120,6 @@ export default function AdminEventsPage() {
   
   const [createEvent] = useMutation(CREATE_EVENT, {
     onCompleted: () => {
-      // Refetch the events after successful creation
-      refetch();
       // Reset form
       setTitle('');
       setDescription('');
@@ -135,6 +138,8 @@ export default function AdminEventsPage() {
         message: "Event created successfully!",
         type: "success"
       });
+      // Refetch to update the list
+      refetch();
     },
     onError: (error) => {
       console.error('Error creating event:', error);
@@ -149,7 +154,6 @@ export default function AdminEventsPage() {
   
   const [updateEvent] = useMutation(UPDATE_EVENT, {
     onCompleted: () => {
-      refetch();
       setTitle('');
       setDescription('');
       setDate('');
@@ -168,6 +172,8 @@ export default function AdminEventsPage() {
         message: "Event updated successfully!",
         type: "success"
       });
+      // Refetch to update the list
+      refetch();
     },
     onError: (error) => {
       console.error('Error updating event:', error);
@@ -182,13 +188,14 @@ export default function AdminEventsPage() {
   
   const [deleteEvent] = useMutation(DELETE_EVENT, {
     onCompleted: () => {
-      refetch();
       setModalState({
         isOpen: true,
         title: "Success",
         message: "Event deleted successfully!",
         type: "success"
       });
+      // Refetch to update the list
+      refetch();
     },
     onError: (error) => {
       console.error('Error deleting event:', error);
@@ -213,7 +220,13 @@ export default function AdminEventsPage() {
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
-  const events = data?.events.items || [];
+  const events = useMemo(() => {
+    return [...(data?.events.items || [])].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [data?.events.items, sortOrder]);
   
   // Handle editing an event
   const handleEditEvent = (event: Event) => {
@@ -289,11 +302,11 @@ export default function AdminEventsPage() {
             onClick={() => setShowCalendar(!showCalendar)}
             className={`px-4 py-2 rounded-md ${
               showCalendar 
-                ? 'bg-green-600 text-white hover:bg-green-700' 
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' 
+                : 'bg-green-600 text-white hover:bg-green-700'
             }`}
           >
-            {showCalendar ? 'Hide Calendar' : 'Show Calendar'}
+            {showCalendar ? 'Show Table' : 'Show Calendar'}
           </button>
           <button 
             onClick={() => setShowForm(!showForm)}
@@ -301,6 +314,19 @@ export default function AdminEventsPage() {
           >
             {showForm ? 'Cancel' : 'Add New Event'}
           </button>
+          {showTable && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-gray-700">Sort by:</span>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="desc">Newest First</option>
+                <option value="asc">Oldest First</option>
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -317,7 +343,7 @@ export default function AdminEventsPage() {
 
       {/* Add Event Form */}
       {showForm && (
-        <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <div className="bg-white shadow rounded-lg p-6 mb-6 border border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             {editingEventId ? 'Update Event' : 'Create New Event'}
           </h2>
@@ -367,7 +393,7 @@ export default function AdminEventsPage() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -379,7 +405,7 @@ export default function AdminEventsPage() {
                   required
                   value={eventType}
                   onChange={(e) => setEventType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
                   <option value="CONFERENCE">Conference</option>
                   <option value="MEETUP">Meetup</option>
@@ -398,7 +424,7 @@ export default function AdminEventsPage() {
                   required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -410,7 +436,7 @@ export default function AdminEventsPage() {
                   id="eventEndDate"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div className="md:col-span-2">
@@ -423,7 +449,7 @@ export default function AdminEventsPage() {
                   required
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div className="md:col-span-2">
@@ -436,7 +462,7 @@ export default function AdminEventsPage() {
                   required
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -448,7 +474,7 @@ export default function AdminEventsPage() {
                   id="eventCapacity"
                   value={capacity}
                   onChange={(e) => setCapacity(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div className="flex items-center pt-6">
@@ -472,7 +498,7 @@ export default function AdminEventsPage() {
                   value={registrationUrl}
                   onChange={(e) => setRegistrationUrl(e.target.value)}
                   placeholder="https://example.com/register"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
               <div className="md:col-span-2">
@@ -485,7 +511,7 @@ export default function AdminEventsPage() {
                   value={imageUrl}
                   onChange={(e) => setImageUrl(e.target.value)}
                   placeholder="https://example.com/image.jpg"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -533,8 +559,8 @@ export default function AdminEventsPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {events.length > 0 ? (
-                events.map((event) => (
-                  <tr key={event.id}>
+                events.map((event, index) => (
+                  <tr key={`${event.id}-${index}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{event.title}</div>
                     </td>
