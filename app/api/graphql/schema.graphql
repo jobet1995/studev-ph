@@ -1,0 +1,306 @@
+type Blog {
+  id: ID!
+  title: String!
+  content: String!
+  excerpt: String
+  author: String!
+  date: String!
+  updatedAt: String
+  slug: String!
+  tags: [String!]
+  published: Boolean!
+  featured: Boolean!
+  imageUrl: String
+  readTime: Int
+}
+
+input BlogFilter {
+  author: String
+  tag: String
+  published: Boolean
+  featured: Boolean
+}
+
+input BlogSort {
+  field: BlogSortField!
+  direction: SortDirection!
+}
+
+enum BlogSortField {
+  DATE
+  TITLE
+  AUTHOR
+}
+
+enum SortDirection {
+  ASC
+  DESC
+}
+
+type Event {
+  id: ID!
+  title: String!
+  description: String!
+  date: String!
+  endDate: String
+  location: String!
+  slug: String!
+  eventType: EventType!
+  capacity: Int
+  registeredCount: Int!
+  isVirtual: Boolean!
+  registrationUrl: String
+  imageUrl: String
+}
+
+enum EventType {
+  CONFERENCE
+  MEETUP
+  WORKSHOP
+  WEBINAR
+  HACKATHON
+}
+
+input EventFilter {
+  eventType: EventType
+  location: String
+  isVirtual: Boolean
+  upcoming: Boolean
+}
+
+input CreateBlogInput {
+  title: String!
+  content: String!
+  excerpt: String
+  author: String!
+  tags: [String!]
+  published: Boolean = true
+  featured: Boolean = false
+  imageUrl: String
+}
+
+input UpdateBlogInput {
+  id: ID!
+  title: String
+  content: String
+  excerpt: String
+  author: String
+  tags: [String!]
+  published: Boolean
+  featured: Boolean
+  imageUrl: String
+}
+
+input CreateEventInput {
+  title: String!
+  description: String!
+  date: String!
+  endDate: String
+  location: String!
+  eventType: EventType!
+  capacity: Int
+  isVirtual: Boolean = false
+  registrationUrl: String
+  imageUrl: String
+}
+
+input UpdateEventInput {
+  id: ID!
+  title: String
+  description: String
+  date: String
+  endDate: String
+  location: String
+  eventType: EventType
+  capacity: Int
+  isVirtual: Boolean
+  registrationUrl: String
+  imageUrl: String
+}
+
+input CreateUserInput {
+  name: String!
+  email: String!
+  role: String!
+  password: String!
+}
+
+input UpdateUserInput {
+  id: ID!
+  name: String
+  email: String
+  role: String
+  status: String
+}
+
+input CreateReportInput {
+  title: String!
+  type: String!
+  content: String!
+  status: String!
+}
+
+input UpdateReportInput {
+  id: ID!
+  title: String
+  type: String
+  content: String
+  status: String
+}
+
+input PaginationInput {
+  page: Int = 1
+  limit: Int = 10
+}
+
+input UserFilter {
+  role: String
+  status: String
+}
+
+input ReportFilter {
+  type: String
+  status: String
+}
+
+input DashboardFilter {
+  dateRange: DateRangeInput
+}
+
+input DateRangeInput {
+  startDate: String!
+  endDate: String!
+}
+
+type PaginatedUsers {
+  items: [User!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  currentPage: Int!
+}
+
+type PaginatedReports {
+  items: [Report!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  currentPage: Int!
+}
+
+type PaginatedBlogs {
+  items: [Blog!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  currentPage: Int!
+}
+
+type PaginatedEvents {
+  items: [Event!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  currentPage: Int!
+}
+
+type Mutation {
+  # Blog mutations
+  createBlog(input: CreateBlogInput!): Blog!
+  updateBlog(input: UpdateBlogInput!): Blog!
+  deleteBlog(id: ID!): Boolean!
+  publishBlog(id: ID!): Blog!
+  
+  # Event mutations
+  createEvent(input: CreateEventInput!): Event!
+  updateEvent(input: UpdateEventInput!): Event!
+  deleteEvent(id: ID!): Boolean!
+  registerForEvent(eventId: ID!, userEmail: String!): Boolean!
+  
+  # User mutations
+  createUser(input: CreateUserInput!): User!
+  updateUser(input: UpdateUserInput!): User!
+  deleteUser(id: ID!): Boolean!
+  
+  # Report mutations
+  createReport(input: CreateReportInput!): Report!
+  updateReport(input: UpdateReportInput!): Report!
+  deleteReport(id: ID!): Boolean!
+}
+
+type Query {
+  # Blog queries
+  blogs(
+    filter: BlogFilter
+    sort: BlogSort
+    pagination: PaginationInput
+  ): PaginatedBlogs!
+  blog(id: ID!): Blog
+  blogBySlug(slug: String!): Blog
+  featuredBlogs(limit: Int = 5): [Blog!]!
+  
+  # Event queries
+  events(
+    filter: EventFilter
+    pagination: PaginationInput
+  ): PaginatedEvents!
+  event(id: ID!): Event
+  eventBySlug(slug: String!): Event
+  upcomingEvents(limit: Int = 5): [Event!]!
+  eventsByType(eventType: EventType!): [Event!]!
+  
+  # Search
+  search(query: String!): SearchResult!
+  
+  # User queries
+  users(filter: UserFilter, pagination: PaginationInput): PaginatedUsers!
+  user(id: ID!): User
+  
+  # Report queries
+  reports(filter: ReportFilter, pagination: PaginationInput): PaginatedReports!
+  report(id: ID!): Report
+  
+  # Dashboard queries
+  dashboardStats: DashboardStats!
+  recentActivity(limit: Int = 10): [RecentActivity!]!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  role: String!
+  status: String!
+  createdAt: String!
+  lastActive: String
+}
+
+type Report {
+  id: ID!
+  title: String!
+  type: String!
+  date: String!
+  status: String!
+  content: String!
+}
+
+type DashboardStats {
+  totalBlogs: Int!
+  publishedBlogs: Int!
+  totalEvents: Int!
+  totalUsers: Int!
+}
+
+type RecentActivity {
+  id: ID!
+  title: String!
+  type: String!
+  timestamp: String!
+  action: String!
+}
+
+type SearchResult {
+  blogs: [Blog!]!
+  events: [Event!]!
+  totalCount: Int!
+}
