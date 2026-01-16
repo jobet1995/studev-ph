@@ -222,6 +222,11 @@ type Mutation {
   updateUser(input: UpdateUserInput!): User!
   deleteUser(id: ID!): Boolean!
   
+  # Post mutations
+  createPost(input: CreatePostInput!): Post!
+  updatePost(input: UpdatePostInput!): Post!
+  deletePost(id: ID!): Boolean!
+  
   # Report mutations
   createReport(input: CreateReportInput!): Report!
   updateReport(input: UpdateReportInput!): Report!
@@ -256,6 +261,10 @@ type Query {
   users(filter: UserFilter, pagination: PaginationInput): PaginatedUsers!
   user(id: ID!): User
   
+  # Post queries
+  posts(filter: PostFilter, pagination: PaginationInput): PaginatedPosts!
+  post(id: ID!): Post
+  
   # Report queries
   reports(filter: ReportFilter, pagination: PaginationInput): PaginatedReports!
   report(id: ID!): Report
@@ -289,6 +298,7 @@ type DashboardStats {
   publishedBlogs: Int!
   totalEvents: Int!
   totalUsers: Int!
+  totalPosts: Int!
 }
 
 type RecentActivity {
@@ -297,6 +307,52 @@ type RecentActivity {
   type: String!
   timestamp: String!
   action: String!
+}
+
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  category: String!
+  priority: String!
+  author: String!
+  createdAt: String!
+  updatedAt: String
+  published: Boolean!
+}
+
+type PaginatedPosts {
+  items: [Post!]!
+  totalCount: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  currentPage: Int!
+}
+
+input CreatePostInput {
+  title: String!
+  content: String!
+  category: String!
+  priority: String!
+  author: String!
+  published: Boolean = true
+}
+
+input UpdatePostInput {
+  id: ID!
+  title: String
+  content: String
+  category: String
+  priority: String
+  author: String
+  published: Boolean
+}
+
+input PostFilter {
+  category: String
+  priority: String
+  author: String
+  published: Boolean
 }
 
 type SearchResult {

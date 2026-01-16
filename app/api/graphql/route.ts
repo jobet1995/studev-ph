@@ -33,13 +33,37 @@ interface Event {
     imageUrl?: string;
 }
 
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    createdAt: string;
+    lastActive?: string;
+}
+
+interface Post {
+    id: string;
+    title: string;
+    content: string;
+    category: string;
+    priority: string;
+    author: string;
+    createdAt: string;
+    updatedAt?: string;
+    published: boolean;
+}
+
 // Initialize data stores
 let blogs: Blog[] = [];
 let events: Event[] = [];
+let posts: Post[] = [];
 
 // Start with completely empty data stores
 blogs = [];
 events = [];
+posts = [];
 
 import { join } from 'path';
 import { readFileSync } from 'fs';
@@ -209,11 +233,79 @@ const schema = createSchema({
                 };
             },
             
+            // User queries
+            users: (_: unknown, { filter, pagination }: { filter?: any; pagination?: any }) => {
+                // For now, return empty users list since we removed mock data
+                // In a real app, this would query a user database
+                const users: User[] = [];
+                
+                // Apply pagination
+                const page = pagination?.page || 1;
+                const limit = pagination?.limit || 10;
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const paginatedItems = users.slice(startIndex, endIndex);
+                
+                return {
+                    items: paginatedItems,
+                    totalCount: users.length,
+                    hasNextPage: endIndex < users.length,
+                    hasPreviousPage: startIndex > 0,
+                    currentPage: page,
+                };
+            },
+            
+            user: (_: unknown, { id }: { id: string }) => {
+                // Return null since we have no user data
+                return null;
+            },
+            
+            // Post queries
+            posts: (_: unknown, { filter, pagination }: { filter?: any; pagination?: any }) => {
+                let filteredPosts = [...posts];
+                
+                // Apply filters if provided
+                if (filter) {
+                    if (filter.category) {
+                        filteredPosts = filteredPosts.filter(post => post.category === filter.category);
+                    }
+                    if (filter.priority) {
+                        filteredPosts = filteredPosts.filter(post => post.priority === filter.priority);
+                    }
+                    if (filter.author) {
+                        filteredPosts = filteredPosts.filter(post => post.author === filter.author);
+                    }
+                    if (typeof filter.published !== 'undefined') {
+                        filteredPosts = filteredPosts.filter(post => post.published === filter.published);
+                    }
+                }
+                
+                // Apply pagination
+                const page = pagination?.page || 1;
+                const limit = pagination?.limit || 10;
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const paginatedItems = filteredPosts.slice(startIndex, endIndex);
+                
+                return {
+                    items: paginatedItems,
+                    totalCount: filteredPosts.length,
+                    hasNextPage: endIndex < filteredPosts.length,
+                    hasPreviousPage: startIndex > 0,
+                    currentPage: page,
+                };
+            },
+            
+            post: (_: unknown, { id }: { id: string }) => {
+                return posts.find(post => post.id === id) || null;
+            },
+            
             dashboardStats: () => {
                 // Calculate dashboard statistics
                 const totalBlogs = blogs.length;
                 const publishedBlogs = blogs.filter(blog => blog.published).length;
                 const totalEvents = events.length;
+                const totalPosts = posts.length;
                 
                 // For simplicity, assuming 10 users (would come from a real user data source)
                 const totalUsers = 10;
@@ -223,11 +315,12 @@ const schema = createSchema({
                     publishedBlogs,
                     totalEvents,
                     totalUsers,
+                    totalPosts,
                 };
             },
             
             recentActivity: (_: unknown, { limit }: { limit: number }) => {
-                // Create recent activity data based on existing blogs and events
+                // Create recent activity data based on existing blogs, events, and posts
                 const activity = [
                     ...blogs.slice(0, 2).map((blog, index) => ({
                         id: `blog-${blog.id}`,
@@ -242,6 +335,13 @@ const schema = createSchema({
                         type: 'event',
                         timestamp: event.date,
                         action: 'Scheduled',
+                    })),
+                    ...posts.slice(0, 2).map((post, index) => ({
+                        id: `post-${post.id}`,
+                        title: post.title,
+                        type: 'post',
+                        timestamp: post.createdAt,
+                        action: 'Posted',
                     })),
                 ];
                 
@@ -373,6 +473,48 @@ const schema = createSchema({
                 // For now, just increment the registered count
                 event.registeredCount += 1;
                 return true;
+            },
+            
+            // Post mutations
+            createPost: (_: unknown, { input }: { input: any }) => {
+                const newPost = {
+                    id: String(posts.length + 1),
+                    title: input.title,
+                    content: input.content,
+                    category: input.category,
+                    priority: input.priority,
+                    author: input.author,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    published: input.published !== undefined ? input.published : true,
+                };
+                posts.push(newPost);
+                return newPost;
+            },
+            
+            updatePost: (_: unknown, { input }: { input: any }) => {
+                const postIndex = posts.findIndex(post => post.id === input.id);
+                if (postIndex === -1) {
+                    throw new Error(`Post with id ${input.id} not found`);
+                }
+                
+                const updatedPost = {
+                    ...posts[postIndex],
+                    ...input,
+                    updatedAt: new Date().toISOString(),
+                };
+                
+                posts[postIndex] = updatedPost;
+                return updatedPost;
+            },
+            
+            deletePost: (_: unknown, { id }: { id: string }) => {
+                const initialLength = posts.length;
+                const postIndex = posts.findIndex(post => post.id === id);
+                if (postIndex !== -1) {
+                    posts.splice(postIndex, 1);
+                }
+                return posts.length < initialLength;
             },
         },
     },

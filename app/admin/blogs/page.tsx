@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
 
 interface Blog {
@@ -42,13 +42,54 @@ const GET_BLOGS = gql`
   }
 `;
 
+// GraphQL mutation to create a blog
+const CREATE_BLOG = gql`
+  mutation CreateBlog($input: CreateBlogInput!) {
+    createBlog(input: $input) {
+      id
+      title
+      author
+      date
+      published
+    }
+  }
+`;
+
 export default function AdminBlogsPage() {
-  const { data, loading, error } = useQuery<BlogsData>(GET_BLOGS, {
+  const { data, loading, error, refetch } = useQuery<BlogsData>(GET_BLOGS, {
     variables: {
       pagination: { page: 1, limit: 10 }
     }
   });
+  
+  const [createBlog] = useMutation(CREATE_BLOG, {
+    onCompleted: () => {
+      // Refetch the blogs after successful creation
+      refetch();
+      // Reset form
+      setTitle('');
+      setAuthor('');
+      setContent('');
+      setExcerpt('');
+      setTags('');
+      setPublished(true);
+      setFeatured(false);
+      setShowForm(false);
+    },
+    onError: (error) => {
+      console.error('Error creating blog:', error);
+    }
+  });
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [content, setContent] = useState('');
+  const [excerpt, setExcerpt] = useState('');
+  const [tags, setTags] = useState('');
+  const [published, setPublished] = useState(true);
+  const [featured, setFeatured] = useState(false);
 
   const blogs = data?.blogs.items || [];
 
@@ -86,8 +127,11 @@ export default function AdminBlogsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Manage Blogs</h1>
-        <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-          Add New Blog
+        <button 
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          {showForm ? 'Cancel' : 'Add New Blog'}
         </button>
       </div>
 
@@ -100,6 +144,131 @@ export default function AdminBlogsPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
+      {/* Add Blog Form */}
+      {showForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Blog</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            createBlog({
+              variables: {
+                input: {
+                  title,
+                  content,
+                  excerpt,
+                  author,
+                  tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+                  published,
+                  featured,
+                }
+              }
+            });
+          }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
+                  Author *
+                </label>
+                <input
+                  type="text"
+                  id="author"
+                  required
+                  value={author}
+                  onChange={(e) => setAuthor(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="excerpt" className="block text-sm font-medium text-gray-700 mb-1">
+                  Excerpt
+                </label>
+                <textarea
+                  id="excerpt"
+                  rows={3}
+                  value={excerpt}
+                  onChange={(e) => setExcerpt(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+                  Content *
+                </label>
+                <textarea
+                  id="content"
+                  rows={6}
+                  required
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="tags" className="block text-sm font-medium text-gray-700 mb-1">
+                  Tags (comma separated)
+                </label>
+                <input
+                  type="text"
+                  id="tags"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="React, JavaScript, Tutorial"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex items-center space-x-6 pt-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={published}
+                    onChange={(e) => setPublished(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Published</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => setFeatured(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Featured</span>
+                </label>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Create Blog
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">

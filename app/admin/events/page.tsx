@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { gql } from '@apollo/client';
-import { useQuery } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client/react';
 import Link from 'next/link';
 
 interface Event {
@@ -42,13 +42,60 @@ const GET_EVENTS = gql`
   }
 `;
 
+// GraphQL mutation to create an event
+const CREATE_EVENT = gql`
+  mutation CreateEvent($input: CreateEventInput!) {
+    createEvent(input: $input) {
+      id
+      title
+      date
+      location
+      eventType
+    }
+  }
+`;
+
 export default function AdminEventsPage() {
-  const { data, loading, error } = useQuery<EventsData>(GET_EVENTS, {
+  const { data, loading, error, refetch } = useQuery<EventsData>(GET_EVENTS, {
     variables: {
       pagination: { page: 1, limit: 10 }
     }
   });
+  
+  const [createEvent] = useMutation(CREATE_EVENT, {
+    onCompleted: () => {
+      // Refetch the events after successful creation
+      refetch();
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setDate('');
+      setEndDate('');
+      setLocation('');
+      setEventType('CONFERENCE');
+      setCapacity('');
+      setIsVirtual(false);
+      setRegistrationUrl('');
+      setImageUrl('');
+      setShowForm(false);
+    },
+    onError: (error) => {
+      console.error('Error creating event:', error);
+    }
+  });
+  
   const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [location, setLocation] = useState('');
+  const [eventType, setEventType] = useState('CONFERENCE');
+  const [capacity, setCapacity] = useState('');
+  const [isVirtual, setIsVirtual] = useState(false);
+  const [registrationUrl, setRegistrationUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
   const events = data?.events.items || [];
 
@@ -86,8 +133,11 @@ export default function AdminEventsPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Manage Events</h1>
-        <button className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-          Add New Event
+        <button 
+          onClick={() => setShowForm(!showForm)}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          {showForm ? 'Cancel' : 'Add New Event'}
         </button>
       </div>
 
@@ -100,6 +150,181 @@ export default function AdminEventsPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
       </div>
+
+      {/* Add Event Form */}
+      {showForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Event</h2>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            createEvent({
+              variables: {
+                input: {
+                  title,
+                  description,
+                  date,
+                  endDate: endDate || null,
+                  location,
+                  eventType,
+                  capacity: capacity ? parseInt(capacity) : null,
+                  isVirtual,
+                  registrationUrl: registrationUrl || null,
+                  imageUrl: imageUrl || null,
+                }
+              }
+            });
+          }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  id="eventTitle"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="eventType" className="block text-sm font-medium text-gray-700 mb-1">
+                  Event Type *
+                </label>
+                <select
+                  id="eventType"
+                  required
+                  value={eventType}
+                  onChange={(e) => setEventType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="CONFERENCE">Conference</option>
+                  <option value="MEETUP">Meetup</option>
+                  <option value="WORKSHOP">Workshop</option>
+                  <option value="WEBINAR">Webinar</option>
+                  <option value="HACKATHON">Hackathon</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="eventDate" className="block text-sm font-medium text-gray-700 mb-1">
+                  Start Date *
+                </label>
+                <input
+                  type="date"
+                  id="eventDate"
+                  required
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="eventEndDate" className="block text-sm font-medium text-gray-700 mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  id="eventEndDate"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="eventLocation" className="block text-sm font-medium text-gray-700 mb-1">
+                  Location *
+                </label>
+                <input
+                  type="text"
+                  id="eventLocation"
+                  required
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="eventDescription" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  id="eventDescription"
+                  rows={4}
+                  required
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="eventCapacity" className="block text-sm font-medium text-gray-700 mb-1">
+                  Capacity
+                </label>
+                <input
+                  type="number"
+                  id="eventCapacity"
+                  value={capacity}
+                  onChange={(e) => setCapacity(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="flex items-center pt-6">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={isVirtual}
+                    onChange={(e) => setIsVirtual(e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Virtual Event</span>
+                </label>
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="eventRegistrationUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  Registration URL
+                </label>
+                <input
+                  type="url"
+                  id="eventRegistrationUrl"
+                  value={registrationUrl}
+                  onChange={(e) => setRegistrationUrl(e.target.value)}
+                  placeholder="https://example.com/register"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="eventImageUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                  Image URL
+                </label>
+                <input
+                  type="url"
+                  id="eventImageUrl"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Create Event
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
