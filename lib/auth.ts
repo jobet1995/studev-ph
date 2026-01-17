@@ -68,6 +68,10 @@ export const DEFAULT_AUTH_CONFIG: AuthConfig = {
 export class AuthService {
   private config: AuthConfig;
 
+  /**
+   * Creates an instance of AuthService with the given configuration
+   * @param config - Optional partial configuration to override defaults
+   */
   constructor(config: Partial<AuthConfig> = {}) {
     this.config = { ...DEFAULT_AUTH_CONFIG, ...config };
   }
@@ -106,6 +110,7 @@ export class AuthService {
 
   /**
    * Get authentication token from various sources
+   * @returns The authentication token or null if not found
    */
   public getToken(): string | null {
     // Try localStorage first
@@ -125,6 +130,7 @@ export class AuthService {
 
   /**
    * Get user data from localStorage
+   * @returns The user data or null if not found
    */
   public getUser(): SessionData['user'] | null {
     const userDataStr = localStorage.getItem(this.config.localStorageKeys.user);
@@ -141,6 +147,7 @@ export class AuthService {
 
   /**
    * Get session state information
+   * @returns The session state or null if not found
    */
   public getSessionState(): { expiresAt: number; issuedAt: number; userId: string } | null {
     const sessionStateStr = localStorage.getItem(this.config.localStorageKeys.sessionState);
@@ -157,6 +164,7 @@ export class AuthService {
 
   /**
    * Check if session is valid (not expired)
+   * @returns True if the session is valid, false otherwise
    */
   public isSessionValid(): boolean {
     const sessionState = this.getSessionState();
@@ -171,6 +179,7 @@ export class AuthService {
 
   /**
    * Check if session is expired
+   * @returns True if the session is expired, false otherwise
    */
   public isSessionExpired(): boolean {
     const sessionState = this.getSessionState();
@@ -184,6 +193,7 @@ export class AuthService {
 
   /**
    * Check if token needs refresh (will expire soon)
+   * @returns True if the token needs refresh, false otherwise
    */
   public needsRefresh(): boolean {
     const sessionState = this.getSessionState();
@@ -197,6 +207,7 @@ export class AuthService {
 
   /**
    * Check if refresh token is expired
+   * @returns True if the refresh token is expired, false otherwise
    */
   public isRefreshTokenExpired(): boolean {
     const refreshTokenExpiryStr = localStorage.getItem(this.config.localStorageKeys.refreshToken + '_expiresAt');
@@ -217,6 +228,7 @@ export class AuthService {
 
   /**
    * Validate session by checking token existence and validity
+   * @returns A promise that resolves to true if the session is valid, false otherwise
    */
   public async validateSession(): Promise<boolean> {
     const token = this.getToken();
@@ -243,6 +255,7 @@ export class AuthService {
 
   /**
    * Refresh session token if needed
+   * @returns A promise that resolves to true if the session was successfully refreshed, false otherwise
    */
   public async refreshSession(): Promise<boolean> {
     // Check if the refresh token itself is expired
@@ -321,6 +334,7 @@ export class AuthService {
 
   /**
    * Redirect to login page
+   * @param returnUrl - Optional URL to return to after login
    */
   public redirectToLogin(returnUrl?: string): void {
     const redirectUrl = returnUrl ? `/admin/login?return=${encodeURIComponent(returnUrl)}` : '/admin/login';
@@ -329,6 +343,8 @@ export class AuthService {
 
   /**
    * Check user permissions
+   * @param permission - The permission to check for
+   * @returns True if the user has the specified permission, false otherwise
    */
   public hasPermission(permission: string): boolean {
     const user = this.getUser();
@@ -341,6 +357,8 @@ export class AuthService {
 
   /**
    * Wait for session to be ready
+   * @param timeoutMs - The timeout in milliseconds (defaults to 5000)
+   * @returns A promise that resolves to true if the session becomes ready within the timeout, false otherwise
    */
   public async waitForSession(timeoutMs: number = 5000): Promise<boolean> {
     return new Promise((resolve) => {
@@ -362,6 +380,8 @@ export class AuthService {
 
   /**
    * Internal method to set cookie
+   * @param name - The name of the cookie
+   * @param value - The value of the cookie
    */
   private setCookie(name: string, value: string): void {
     if (typeof document !== 'undefined') {
@@ -375,6 +395,8 @@ export class AuthService {
 
   /**
    * Internal method to get cookie
+   * @param name - The name of the cookie to retrieve
+   * @returns The value of the cookie or null if not found
    */
   private getCookie(name: string): string | null {
     if (typeof document !== 'undefined') {
@@ -389,6 +411,7 @@ export class AuthService {
 
   /**
    * Internal method to clear cookie
+   * @param name - The name of the cookie to clear
    */
   private clearCookie(name: string): void {
     if (typeof document !== 'undefined') {
@@ -404,6 +427,7 @@ export const authService = new AuthService();
 
 /**
  * Hook for client-side session management
+ * @returns An object containing the authentication status and loading state
  */
 export function useSessionManager() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -430,7 +454,10 @@ export function useSessionManager() {
   return { isAuthenticated, isLoading };
 }
 
-// For server-side usage
+/**
+ * Gets the authentication token from server-side cookies
+ * @returns A promise that resolves to the authentication token or null if not found
+ */
 export async function getServerToken() {
   try {
     const cookieStore = await cookies();

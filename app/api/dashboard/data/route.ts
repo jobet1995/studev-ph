@@ -10,7 +10,11 @@ interface JwtPayload {
   iat?: number;
 }
 
-// Verify JWT token
+/**
+ * Verifies a JWT token by decoding and validating its claims
+ * @param token - The JWT token to verify
+ * @returns A promise that resolves to the decoded token payload or null if invalid
+ */
 async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
     // For now, we'll just check if the token exists and is valid
@@ -40,6 +44,12 @@ async function verifyToken(token: string): Promise<JwtPayload | null> {
   }
 }
 
+/**
+ * Retrieves dashboard statistics and data for authenticated admin users
+ * Verifies the user's authentication token and returns various metrics
+ * @param request - The incoming HTTP request with authorization header
+ * @returns A response containing dashboard data or an error if unauthorized
+ */
 export async function GET(request: Request) {
   try {
     // Extract token from Authorization header
