@@ -68,6 +68,14 @@ export async function POST(request: Request) {
       );
     }
     
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection unavailable' },
+        { status: 500 }
+      );
+    }
+    
     // Fetch user data from Firestore to confirm user still exists and is active
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -119,6 +127,14 @@ export async function POST(request: Request) {
       // Sign new tokens
       newAccessToken = jwtModule.default.sign(accessPayload, jwtSecret, { expiresIn: '15m' });
       newRefreshToken = jwtModule.default.sign(refreshPayloadNew, refreshSecret, { expiresIn: '7d' }); // 7 days
+      
+      // Check if database is available (double-check for the update operation)
+      if (!db) {
+        return NextResponse.json(
+          { message: 'Database connection unavailable' },
+          { status: 500 }
+        );
+      }
       
       // Update the refresh token in the database for rotation and security
       await updateDoc(userRef, {

@@ -85,6 +85,14 @@ export async function GET(request: Request) {
       );
     }
     
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection unavailable' },
+        { status: 500 }
+      );
+    }
+    
     // Fetch user data from Firestore
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
@@ -202,6 +210,14 @@ export async function PUT(request: Request) {
     // Handle avatar upload if present
     if (avatarFile) {
       try {
+        // Check if storage is available
+        if (!storage) {
+          return NextResponse.json(
+            { message: 'Storage service unavailable' },
+            { status: 500 }
+          );
+        }
+        
         const fileName = `avatars/${userId}_${Date.now()}_${avatarFile.name}`;
         const storageRef = ref(storage, fileName);
         
@@ -224,6 +240,14 @@ export async function PUT(request: Request) {
     // Handle cover photo upload if present
     if (coverPhotoFile) {
       try {
+        // Check if storage is available
+        if (!storage) {
+          return NextResponse.json(
+            { message: 'Storage service unavailable' },
+            { status: 500 }
+          );
+        }
+        
         const fileName = `covers/${userId}_${Date.now()}_${coverPhotoFile.name}`;
         const storageRef = ref(storage, fileName);
         
@@ -241,6 +265,14 @@ export async function PUT(request: Request) {
         console.error('Error uploading cover photo to Firebase Storage:', uploadErr);
         // Don't add coverPhoto to filteredUpdateData to avoid overwriting existing image
       }
+    }
+    
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection unavailable' },
+        { status: 500 }
+      );
     }
     
     // Update user data in Firestore

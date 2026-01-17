@@ -82,6 +82,13 @@ export async function GET(request: Request) {
     }
 
     // Fetch dashboard data from Firestore collections
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection failed' },
+        { status: 500 }
+      );
+    }
+    
     const blogsCollection = collection(db, 'blogs');
     const eventsCollection = collection(db, 'events');
     const postsCollection = collection(db, 'posts');

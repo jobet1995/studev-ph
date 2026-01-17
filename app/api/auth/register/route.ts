@@ -19,6 +19,13 @@ function generateRequestId(): string {
  */
 export async function POST(request: Request) {
   try {
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection unavailable' },
+        { status: 500 }
+      );
+    }
+    
     const body = await request.json();
     const { firstName, lastName, email, password, position, phoneNumber } = body;
 

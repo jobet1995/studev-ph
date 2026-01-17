@@ -39,6 +39,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if Firebase is initialized
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Authentication service temporarily unavailable' },
+        { status: 503 }
+      );
+    }
+    
     // Find user by email
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('email', '==', email));

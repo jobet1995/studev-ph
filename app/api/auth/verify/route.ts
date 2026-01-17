@@ -65,6 +65,14 @@ export async function POST(request: Request) {
       );
     }
     
+    // Check if database is available
+    if (!db) {
+      return NextResponse.json(
+        { message: 'Database connection unavailable' },
+        { status: 500 }
+      );
+    }
+    
     // Fetch user data from Firestore to confirm user still exists
     const userRef = doc(db, 'users', userId);
     const userSnap = await getDoc(userRef);
