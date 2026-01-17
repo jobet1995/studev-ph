@@ -28,6 +28,10 @@ export interface UsersResponse {
  */
 export const getUsersFromFirebase = async (page: number = 1, usersLimit: number = 10): Promise<UsersResponse> => {
   try {
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     // Query users collection
     const usersCollection = collection(db, 'users');
     const q = query(usersCollection, orderBy('name'), limit(usersLimit));
@@ -69,6 +73,10 @@ export const getUsersFromFirebase = async (page: number = 1, usersLimit: number 
  */
 export const getUserByIdFromFirebase = async (userId: string): Promise<User | null> => {
   try {
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     const userDoc = doc(db, 'users', userId);
     const snapshot = await getDoc(userDoc);
     
@@ -98,6 +106,10 @@ export const getUserByIdFromFirebase = async (userId: string): Promise<User | nu
  */
 export const addUserToFirebase = async (userData: Omit<User, 'id'>): Promise<string> => {
   try {
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     const usersCollection = collection(db, 'users');
     const docRef = await addDoc(usersCollection, {
       ...userData,
@@ -119,6 +131,10 @@ export const addUserToFirebase = async (userData: Omit<User, 'id'>): Promise<str
  */
 export const updateUserInFirebase = async (userId: string, userData: Partial<User>): Promise<void> => {
   try {
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     const userDoc = doc(db, 'users', userId);
     await updateDoc(userDoc, {
       ...userData,
@@ -137,6 +153,10 @@ export const updateUserInFirebase = async (userId: string, userData: Partial<Use
  */
 export const deleteUserFromFirebase = async (userId: string): Promise<void> => {
   try {
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     const userDoc = doc(db, 'users', userId);
     await deleteDoc(userDoc);
   } catch (error) {
@@ -152,15 +172,27 @@ export const deleteUserFromFirebase = async (userId: string): Promise<void> => {
 export const signInWithGoogle = async (): Promise<User> => {
   const provider = new GoogleAuthProvider();
   try {
+    if (!auth) {
+      throw new Error('Authentication service unavailable');
+    }
+    
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
     
     // Check if user exists in Firestore, if not create a new user
+    if (!db) {
+      throw new Error('Database connection failed');
+    }
+    
     const userDocRef = doc(db, 'users', user.uid);
     const userDocSnap = await getDoc(userDocRef);
     
     if (!userDocSnap.exists()) {
       // Create new user in Firestore
+      if (!db) {
+        throw new Error('Database connection failed');
+      }
+      
       await addDoc(collection(db, 'users'), {
         id: user.uid,
         name: user.displayName || '',
