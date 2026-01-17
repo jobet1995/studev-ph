@@ -233,7 +233,10 @@ export async function PUT(request: Request) {
         filteredUpdateData.profilePicture = avatarUrl;
       } catch (uploadErr: unknown) {
         console.error('Error uploading avatar to Firebase Storage:', uploadErr);
-        // Don't add profilePicture to filteredUpdateData to avoid overwriting existing image
+        return NextResponse.json(
+          { message: `Failed to upload avatar: ${(uploadErr as Error).message || 'Upload failed'}` },
+          { status: 500 }
+        );
       }
     }
     
@@ -263,7 +266,10 @@ export async function PUT(request: Request) {
         filteredUpdateData.coverPhoto = coverPhotoUrl;
       } catch (uploadErr: unknown) {
         console.error('Error uploading cover photo to Firebase Storage:', uploadErr);
-        // Don't add coverPhoto to filteredUpdateData to avoid overwriting existing image
+        return NextResponse.json(
+          { message: `Failed to upload cover photo: ${(uploadErr as Error).message || 'Upload failed'}` },
+          { status: 500 }
+        );
       }
     }
     
