@@ -30,13 +30,30 @@ async function verifyToken(token: string): Promise<JwtPayload | null> {
     }
     
     // Decode the payload to check for expiration and other claims
-    const payload: JwtPayload = JSON.parse(atob(parts[1]));
+    // Replace '-' with '+' and '_' with '/' for base64url decoding
+    let payloadStr = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    // Ensure proper padding
+    while (payloadStr.length % 4) {
+      payloadStr += '=';
+    }
+    
+    let payload: JwtPayload;
+    try {
+      payload = JSON.parse(decodeURIComponent(escape(atob(payloadStr))));
+      console.log('DEBUG: Decoded JWT payload:', payload);
+    } catch (decodeError) {
+      console.error('Error decoding JWT payload:', decodeError);
+      return null;
+    }
+    
     const currentTime = Math.floor(Date.now() / 1000);
     
     if (payload.exp && payload.exp < currentTime) {
+      console.log('DEBUG: Token expired - exp:', payload.exp, 'current:', currentTime);
       return null; // Token expired
     }
     
+    console.log('DEBUG: Token validation passed, returning payload');
     return payload; // Return the decoded payload
   } catch (error) {
     console.error('Token verification error:', error);
@@ -62,24 +79,34 @@ export async function GET(request: Request) {
     }
     
     const token = authHeader.substring(7);
+    console.log('DEBUG: Received token for verification');
     const user = await verifyToken(token);
     
     if (!user) {
+      console.log('DEBUG: Token verification failed');
       return NextResponse.json(
         { message: 'Unauthorized: Invalid token' },
         { status: 401 }
       );
     }
     
-    // Check if user has admin role (make this check more lenient)
-    // Allow access if role exists and is admin/superadmin, or if no role is specified (for backward compatibility)
+    console.log('DEBUG: Token verified successfully, user data:', user);
+    
+    // Check if user has admin role (improved role check)
     const userRole = user?.role;
-    if (userRole && userRole !== 'admin' && userRole !== 'superadmin') {
+    console.log(`User with role '${userRole}' is accessing the dashboard.`);
+    
+    // Allow access to users with admin roles or if role is not specified (for backward compatibility)
+    // During registration, users get 'Administrator' role by default, so this should allow all registered users
+    if (userRole && !['Administrator', 'SuperAdmin', 'Editor', 'Moderator', 'User'].includes(userRole)) {
+      console.log(`User with role '${userRole}' attempted to access dashboard. Only Administrator, SuperAdmin, Editor, Moderator, and User roles are authorized.`);
       return NextResponse.json(
         { message: 'Unauthorized: Insufficient permissions' },
         { status: 403 }
       );
     }
+    
+    console.log(`Access granted to user with role: ${userRole || 'unspecified'}`);
 
     // Fetch dashboard data from Firestore collections
     if (!db) {

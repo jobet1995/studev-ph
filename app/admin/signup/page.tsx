@@ -167,9 +167,16 @@ export default function SignupPage() {
       
       // Registration successful
       setShowSuccessMessage(true);
-      // Store token if provided
-      if (responseData.token) {
-        localStorage.setItem('admin_token', responseData.token);
+      // Store tokens if provided
+      if (responseData.data?.token) {
+        localStorage.setItem('admin_token', responseData.data.token);
+      }
+      if (responseData.data?.refreshToken) {
+        localStorage.setItem('admin_refresh_token', responseData.data.refreshToken);
+      }
+      // Store user data as well
+      if (responseData.data?.user) {
+        localStorage.setItem('admin_user', JSON.stringify(responseData.data.user));
       }
       // Redirect to login page after 3 seconds
       setTimeout(() => {

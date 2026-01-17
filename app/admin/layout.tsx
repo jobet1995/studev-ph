@@ -74,6 +74,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_refresh_token');
+    localStorage.removeItem('admin_user');
     setIsDropdownOpen(false);
     router.push('/admin/login');
   };
@@ -184,19 +186,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </svg>
                 Posting
               </Link>
-              <Link 
-                href="/admin/users" 
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg ${
-                  pathname === '/admin/users' 
-                    ? 'text-black bg-white' 
-                    : 'text-white hover:text-black hover:bg-white hover:bg-opacity-20'
-                }`}
-              >
-                <svg className="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-                Users
-              </Link>
+              {(currentUser?.role === 'Administrator' || currentUser?.role === 'SuperAdmin') && (
+                <Link 
+                  href="/admin/users" 
+                  className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg ${
+                    pathname === '/admin/users' 
+                      ? 'text-black bg-white' 
+                      : 'text-white hover:text-black hover:bg-white hover:bg-opacity-20'
+                  }`}
+                >
+                  <svg className="mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  Users
+                </Link>
+              )}
 
               <Link 
                 href="/admin/content" 

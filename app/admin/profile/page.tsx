@@ -72,11 +72,27 @@ const ProfilePage = () => {
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch profile');
+          // Try to parse error response, fallback to text if JSON fails
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (parseError) {
+            // If JSON parsing fails, get text response
+            const errorText = await response.text();
+            console.error('Error parsing profile response:', parseError);
+            throw new Error(errorText || `Failed to fetch profile: Status ${response.status}`);
+          }
+          throw new Error(errorData.message || `Failed to fetch profile: Status ${response.status}`);
         }
         
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          const errorText = await response.text();
+          console.error('Error parsing profile response:', parseError);
+          throw new Error(`Failed to parse response: ${errorText}`);
+        }
         
         if (!result.success) {
           throw new Error(result.message || 'Failed to fetch profile');
@@ -140,6 +156,18 @@ const ProfilePage = () => {
       });
     }
   }, [isEditing, userProfile]);
+  // Helper function to validate file size
+  const validateFileSize = (file: File | null, maxSizeInMB: number, fieldName: string): boolean => {
+    if (!file) return true;
+    
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024;
+    if (file.size > maxSizeInBytes) {
+      alert(`${fieldName} file size exceeds ${maxSizeInMB}MB limit. Please choose a smaller file.`);
+      return false;
+    }
+    return true;
+  };
+  
   const [formData, setFormData] = useState<FormData>(() => {
     // Initialize form data based on user profile if available
     if (userProfile) {
@@ -177,6 +205,16 @@ const ProfilePage = () => {
     
     if ((name === 'avatar' || name === 'coverPhoto') && e.target instanceof HTMLInputElement && e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Validate file size before processing
+      const maxSize = name === 'avatar' ? 5 : 10; // 5MB for avatar, 10MB for cover
+      const fieldName = name === 'avatar' ? 'Avatar' : 'Cover photo';
+      
+      if (!validateFileSize(file, maxSize, fieldName)) {
+        // Reset the file input to clear the selection
+        e.target.value = '';
+        return;
+      }
       
       // Create preview URL for the new file
       const previewUrl = URL.createObjectURL(file);
@@ -310,11 +348,27 @@ const ProfilePage = () => {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
+        // Try to parse error response, fallback to text if JSON fails
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If JSON parsing fails, get text response
+          const errorText = await response.text();
+          console.error('Error parsing profile update response:', parseError);
+          throw new Error(errorText || `Failed to update profile: Status ${response.status}`);
+        }
+        throw new Error(errorData.message || `Failed to update profile: Status ${response.status}`);
       }
       
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (parseError) {
+        const errorText = await response.text();
+        console.error('Error parsing profile response:', parseError);
+        throw new Error(`Failed to parse response: ${errorText}`);
+      }
       
       if (!result.success) {
         throw new Error(result.message || 'Failed to update profile');
@@ -422,7 +476,7 @@ const ProfilePage = () => {
           <div className="relative flex flex-col md:flex-row items-center">
             <div className="relative mb-4 md:mb-0 md:mr-6">
               <Image 
-                src={userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
+                src={userProfile?.avatar || '/placeholder-profile.png'}
                 alt="User Avatar"
                 width={150}
                 height={150}
@@ -602,7 +656,7 @@ const ProfilePage = () => {
                   <div className="flex items-center mb-6">
                     <div className="mr-6">
                       <Image
-                        src={avatarPreview || userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
+                        src={avatarPreview || userProfile?.avatar || '/placeholder-profile.png'}
                         alt="Profile Preview"
                         width={150}
                         height={150}
@@ -825,7 +879,7 @@ const ProfilePage = () => {
                     <h3 className="text-sm font-medium text-gray-500 mb-3">Profile Picture</h3>
                     <div className="flex items-center">
                       <Image 
-                        src={userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
+                        src={userProfile?.avatar || '/placeholder-profile.png'}
                         alt="User Avatar"
                         width={150}
                         height={150}

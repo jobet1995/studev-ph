@@ -174,6 +174,15 @@ export async function PUT(request: Request) {
     }
     
     // Parse form data to handle file uploads
+    // Limit the size of the form data to prevent large payloads
+    const contentLength = Number(request.headers.get('content-length'));
+    if (contentLength > 10 * 1024 * 1024) { // 10MB limit
+      return NextResponse.json(
+        { message: 'Request entity too large. Maximum allowed size is 10MB.' },
+        { status: 413 }
+      );
+    }
+    
     const formData = await request.formData();
     
     // Get text fields from form data
@@ -189,6 +198,21 @@ export async function PUT(request: Request) {
     // Get file fields
     const avatarFile = formData.get('avatar') as File | null;
     const coverPhotoFile = formData.get('coverPhoto') as File | null;
+    
+    // Validate file sizes
+    if (avatarFile && avatarFile.size > 5 * 1024 * 1024) { // 5MB limit for avatar
+      return NextResponse.json(
+        { message: 'Avatar file size too large. Maximum allowed size is 5MB.' },
+        { status: 400 }
+      );
+    }
+    
+    if (coverPhotoFile && coverPhotoFile.size > 10 * 1024 * 1024) { // 10MB limit for cover photo
+      return NextResponse.json(
+        { message: 'Cover photo file size too large. Maximum allowed size is 10MB.' },
+        { status: 400 }
+      );
+    }
     
     // Fields that can be updated
     const filteredUpdateData: DocumentData = {};

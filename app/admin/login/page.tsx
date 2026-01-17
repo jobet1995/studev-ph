@@ -112,12 +112,17 @@ export default function LoginPage() {
         throw new Error(responseData.message || 'Login failed');
       }
       
-      // Login successful - store user data and token
+      // Login successful - store user data and tokens
       localStorage.setItem('admin_user', JSON.stringify(responseData.data.user));
       if (responseData.data.token) {
         localStorage.setItem('admin_token', responseData.data.token);
         // Also store token in a cookie for server-side validation if needed
         document.cookie = `token=${responseData.data.token}; path=/; max-age=${24*60*60}; SameSite=Lax`;
+      }
+      
+      // Store refresh token if available
+      if (responseData.data.refreshToken) {
+        localStorage.setItem('admin_refresh_token', responseData.data.refreshToken);
       }
       
       // Clear any previous error states

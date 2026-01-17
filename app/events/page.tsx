@@ -12,19 +12,33 @@ interface Event {
   slug: string;
 }
 
+interface PaginatedEvents {
+  items: Event[];
+  totalCount: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  currentPage: number;
+}
+
 interface EventsData {
-  events: Event[];
+  events: PaginatedEvents;
 }
 
 const GET_EVENTS = gql`
   query GetEvents {
     events {
-      id
-      title
-      description
-      date
-      location
-      slug
+      items {
+        id
+        title
+        description
+        date
+        location
+        slug
+      }
+      totalCount
+      hasNextPage
+      hasPreviousPage
+      currentPage
     }
   }
 `;
@@ -44,7 +58,7 @@ export default function EventsPage() {
         <div className="p-8">
             <h1 className="text-3xl font-bold mb-6">Events</h1>
             <div className="grid gap-6">
-                {data?.events?.map((event) => (
+                {data?.events?.items.map((event) => (
                     <div key={event.id} className="border p-4 rounded shadow bg-white dark:bg-gray-800">
                         <h2 className="text-xl font-semibold">{event.title}</h2>
                         <p className="text-sm text-gray-500 mb-1">{event.date}</p>

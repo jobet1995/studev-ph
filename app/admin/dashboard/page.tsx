@@ -108,7 +108,7 @@ const DashboardPage = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Get user information from localStorage
-  const [user, setUser] = useState<{firstName?: string, lastName?: string, email?: string} | null>(null);
+  const [user, setUser] = useState<{firstName?: string, lastName?: string, email?: string, role?: string} | null>(null);
   
   useEffect(() => {
     const storedUser = localStorage.getItem('admin_user');
@@ -127,31 +127,163 @@ const DashboardPage = () => {
     const fetchData = async () => {
       try {
         // Get auth token
-        const token = localStorage.getItem('admin_token');
+        let token = localStorage.getItem('admin_token');
+        
+        // Get user data for debugging
+        const storedUser = localStorage.getItem('admin_user');
+        let userRole = 'unknown';
+        let userId = 'unknown';
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            userRole = parsedUser.role || 'no-role-specified';
+            userId = parsedUser.id || 'no-id-specified';
+            console.log('DEBUG: User role from localStorage:', userRole);
+            console.log('DEBUG: User ID from localStorage:', userId);
+            console.log('DEBUG: Full user object:', parsedUser);
+          } catch (e) {
+            console.error('Error parsing user data:', e);
+          }
+        }
+        
+        console.log('DEBUG: Attempting to fetch dashboard data with role:', userRole, 'and ID:', userId);
         
         // Fetch dashboard data from API
-        const response = await fetch('/api/dashboard/data', {
+        let response = await fetch('/api/dashboard/data', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to fetch dashboard data');
+        console.log('DEBUG: API response status:', response.status);
+        
+        // If we get a 401/403, try to refresh the token
+        if (response.status === 401 || response.status === 403) {
+          console.log('Access token expired or invalid, attempting refresh...');
+          
+          const refreshResult = await refreshAccessToken();
+          if (refreshResult.success) {
+            token = refreshResult.newToken;
+            
+            // Retry the request with the new token
+            response = await fetch('/api/dashboard/data', {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+            });
+            
+            // If the retry after refresh still fails, throw an error
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || `Failed to fetch dashboard data after token refresh: Status ${response.status}`);
+            }
+          } else {
+            // If refresh failed, redirect to login
+            setError('Session expired. Please log in again.');
+            setTimeout(() => {
+              window.location.href = '/admin/login';
+            }, 2000);
+            return;
+          }
         }
         
-        const result = await response.json();
+        // Only process the response if it's OK (this won't execute if we returned early due to refresh failure)
+        if (!response.ok) {
+          // Try to parse error response, fallback to text if JSON fails
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (parseError) {
+            // If JSON parsing fails, get text response
+            const errorText = await response.text();
+            console.error('Error parsing JSON response:', parseError);
+            throw new Error(errorText || `Failed to fetch dashboard data: Status ${response.status}`);
+          }
+          
+          // If it's a 401 or 403 error, this might indicate an expired token
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Token expired or unauthorized');
+          }
+          
+          throw new Error(errorData.message || `Failed to fetch dashboard data: Status ${response.status}`);
+        }
+        
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          const errorText = await response.text();
+          console.error('Error parsing dashboard response:', parseError);
+          throw new Error(`Failed to parse response: ${errorText}`);
+        }
+        
         if (!result.success) {
           throw new Error(result.message || 'Failed to fetch dashboard data');
         }
         
+        console.log('DEBUG: Dashboard data fetched successfully');
         setData(result.data);
       } catch (err: unknown) {
+        console.error('DEBUG: Error in fetchData:', err);
         setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
       } finally {
         setLoading(false);
+      }
+    };
+    
+    // Function to refresh access token
+    const refreshAccessToken = async () => {
+      try {
+        const refreshToken = localStorage.getItem('admin_refresh_token');
+        
+        if (!refreshToken) {
+          console.log('DEBUG: No refresh token available');
+          return { success: false, error: 'No refresh token available' };
+        }
+        
+        console.log('DEBUG: Attempting to refresh token');
+        
+        const response = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${refreshToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        console.log('DEBUG: Refresh response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Token refresh failed:', errorData.message);
+          return { success: false, error: errorData.message };
+        }
+        
+        const result = await response.json();
+        
+        console.log('DEBUG: Refresh result received:', result.success);
+        
+        if (result.success && result.data.token) {
+          localStorage.setItem('admin_token', result.data.token);
+          console.log('DEBUG: New access token stored');
+          
+          // Update user data if needed
+          if (result.data.user) {
+            const currentUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+            localStorage.setItem('admin_user', JSON.stringify({
+              ...currentUser,
+              ...result.data.user
+            }));
+          }
+          return { success: true, newToken: result.data.token };
+        } else {
+          return { success: false, error: result.message || 'Token refresh failed' };
+        }
+      } catch (error) {
+        console.error('Error refreshing token:', error);
+        return { success: false, error: 'Network error during token refresh' };
       }
     };
     
@@ -263,16 +395,38 @@ const DashboardPage = () => {
   }
 
   if (error) {
+    // Check if the error is a permissions issue
+    const isPermissionError = error.includes('Insufficient permissions') || error.includes('403') || error.includes('Unauthorized');
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center p-6 bg-white rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-600">{error || 'An error occurred while loading dashboard data.'}</p>
+        <div className="text-center p-6 bg-white rounded-lg shadow-md max-w-md mx-auto">
+          <h2 className="text-xl font-bold text-red-600 mb-2">
+            {isPermissionError ? 'Access Issue' : 'Error Loading Dashboard'}
+          </h2>
+          <p className="text-gray-600 mb-4">{error || 'An error occurred while loading dashboard data.'}</p>
+          
+          {isPermissionError && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-left">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> There was an issue with your access to the dashboard.
+                This could be due to an expired session or role permissions.
+              </p>
+            </div>
+          )}
+          
           <button 
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            onClick={() => {
+              if (isPermissionError) {
+                // If it's a permission/session error, redirect to profile page
+                window.location.href = '/admin/profile';
+              } else {
+                window.location.reload();
+              }
+            }}
+            className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
           >
-            Retry
+            {isPermissionError ? 'Check Profile' : 'Retry'}
           </button>
         </div>
       </div>

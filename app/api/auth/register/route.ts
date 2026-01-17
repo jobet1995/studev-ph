@@ -70,7 +70,7 @@ export async function POST(request: Request) {
       password: hashedPassword, // Will be hashed
       position,
       phoneNumber: phoneNumber || '',
-      role: 'admin',
+      role: 'Administrator',
       status: 'active',
       bio: '', // Initialize with empty bio/About field
       profilePicture: '', // Initialize with empty profile picture URL
