@@ -34,11 +34,20 @@ interface UserData {
   [key: string]: unknown; // Allow additional properties
 }
 
-// Helper function to generate a request ID
+/**
+ * Generates a unique request ID for tracking API requests
+ * @returns A unique request ID string
+ */
 function generateRequestId(): string {
   return 'req_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 }
 
+/**
+ * Retrieves the authenticated user's profile information
+ * Verifies the user's authentication token and returns their profile data
+ * @param request - The incoming HTTP request with authorization header
+ * @returns A response containing the user's profile data or an error if unauthorized
+ */
 export async function GET(request: Request) {
   try {
     // Extract token from Authorization header
@@ -112,6 +121,13 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * Updates the authenticated user's profile information
+ * Verifies the user's authentication token and updates their profile data
+ * Handles both text fields and file uploads (avatar, cover photo)
+ * @param request - The incoming HTTP request with authorization header and form data
+ * @returns A response indicating success or failure of the profile update
+ */
 export async function PUT(request: Request) {
   try {
     // Extract token from Authorization header
