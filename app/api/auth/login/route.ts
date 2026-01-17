@@ -3,7 +3,10 @@ import { db } from '@/firebase.config';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
 
-// Helper function to generate a request ID
+/**
+ * Generates a unique request ID for tracking API requests
+ * @returns A unique request ID string
+ */
 function generateRequestId(): string {
   return 'req_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
 }
