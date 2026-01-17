@@ -1,0 +1,259 @@
+import { NextResponse } from 'next/server';
+import { db, storage } from '@/firebase.config';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { DocumentData } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
+// Define JWT payload interface
+interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+  position: string;
+  exp?: number;
+  iat?: number;
+  // Add any other expected JWT claims as needed
+}
+
+// Define User data interface
+interface UserData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  position: string;
+  role?: string;
+  bio?: string;
+  timezone?: string;
+  language?: string;
+  profilePicture?: string;
+  coverPhoto?: string;
+  phoneNumber?: string;
+  status: string;
+  createdAt: string;
+  lastLogin: string | null;
+  [key: string]: unknown; // Allow additional properties
+}
+
+// Helper function to generate a request ID
+function generateRequestId(): string {
+  return 'req_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 11);
+}
+
+export async function GET(request: Request) {
+  try {
+    // Extract token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { message: 'Unauthorized: Missing or invalid token' },
+        { status: 401 }
+      );
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // Verify the JWT token using the same secret as in auth
+    let payload: JwtPayload;
+    try {
+      const jwtModule = await import('jsonwebtoken');
+      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+      
+      payload = jwtModule.default.verify(token, jwtSecret) as JwtPayload;
+    } catch (error: unknown) {
+      console.error('Token verification error:', error);
+      return NextResponse.json(
+        { message: 'Unauthorized: Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = payload.userId;
+    
+    if (!userId) {
+      return NextResponse.json(
+        { message: 'Unauthorized: Invalid token' },
+        { status: 401 }
+      );
+    }
+    
+    // Fetch user data from Firestore
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      return NextResponse.json(
+        { message: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    const userData = userSnap.data() as UserData;
+    
+    // Return user data without destructuring password since it shouldn't be in profile data
+    return NextResponse.json({
+      success: true,
+      message: 'Profile retrieved successfully',
+      data: {
+        user: {
+          id: userId,
+          ...userData
+        }
+      },
+      timestamp: new Date().toISOString(),
+      requestId: generateRequestId()
+    });
+    
+  } catch (error: unknown) {
+    console.error('Profile fetch error:', error);
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    // Extract token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { message: 'Unauthorized: Missing or invalid token' },
+        { status: 401 }
+      );
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // Verify the JWT token using the same secret as in auth
+    let payload: JwtPayload;
+    try {
+      const jwtModule = await import('jsonwebtoken');
+      const jwtSecret = process.env.JWT_SECRET || 'fallback_secret_key';
+      
+      payload = jwtModule.default.verify(token, jwtSecret) as JwtPayload;
+    } catch (error: unknown) {
+      console.error('Token verification error:', error);
+      return NextResponse.json(
+        { message: 'Unauthorized: Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = payload.userId;
+    
+    if (!userId) {
+      return NextResponse.json(
+        { message: 'Unauthorized: Invalid token' },
+        { status: 401 }
+      );
+    }
+    
+    // Parse form data to handle file uploads
+    const formData = await request.formData();
+    
+    // Get text fields from form data
+    const firstName = formData.get('firstName') as string | null;
+    const lastName = formData.get('lastName') as string | null;
+    const email = formData.get('email') as string | null;
+    const position = formData.get('position') as string | null;
+    const role = formData.get('role') as string | null;
+    const bio = formData.get('bio') as string | null;
+    const timezone = formData.get('timezone') as string | null;
+    const language = formData.get('language') as string | null;
+    
+    // Get file fields
+    const avatarFile = formData.get('avatar') as File | null;
+    const coverPhotoFile = formData.get('coverPhoto') as File | null;
+    
+    // Fields that can be updated
+    const filteredUpdateData: DocumentData = {};
+    
+    // Add text fields to update data
+    if (firstName !== null) filteredUpdateData.firstName = firstName;
+    if (lastName !== null) filteredUpdateData.lastName = lastName;
+    if (email !== null) filteredUpdateData.email = email;
+    if (position !== null) filteredUpdateData.position = position;
+    if (role !== null) filteredUpdateData.role = role;
+    if (bio !== null) filteredUpdateData.bio = bio;
+    if (timezone !== null) filteredUpdateData.timezone = timezone;
+    if (language !== null) filteredUpdateData.language = language;
+    
+    // Variables to hold the URLs after upload
+    let avatarUrl: string | undefined;
+    let coverPhotoUrl: string | undefined;
+    
+    // Handle avatar upload if present
+    if (avatarFile) {
+      try {
+        const fileName = `avatars/${userId}_${Date.now()}_${avatarFile.name}`;
+        const storageRef = ref(storage, fileName);
+        
+        // Convert File to ArrayBuffer
+        const arrayBuffer = await avatarFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Upload to Firebase Storage
+        await uploadBytes(storageRef, uint8Array, { contentType: avatarFile.type });
+        avatarUrl = await getDownloadURL(storageRef);
+        
+        // Add to update data
+        filteredUpdateData.profilePicture = avatarUrl;
+      } catch (uploadErr: unknown) {
+        console.error('Error uploading avatar to Firebase Storage:', uploadErr);
+        // Don't add profilePicture to filteredUpdateData to avoid overwriting existing image
+      }
+    }
+    
+    // Handle cover photo upload if present
+    if (coverPhotoFile) {
+      try {
+        const fileName = `covers/${userId}_${Date.now()}_${coverPhotoFile.name}`;
+        const storageRef = ref(storage, fileName);
+        
+        // Convert File to ArrayBuffer
+        const arrayBuffer = await coverPhotoFile.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Upload to Firebase Storage
+        await uploadBytes(storageRef, uint8Array, { contentType: coverPhotoFile.type });
+        coverPhotoUrl = await getDownloadURL(storageRef);
+        
+        // Add to update data
+        filteredUpdateData.coverPhoto = coverPhotoUrl;
+      } catch (uploadErr: unknown) {
+        console.error('Error uploading cover photo to Firebase Storage:', uploadErr);
+        // Don't add coverPhoto to filteredUpdateData to avoid overwriting existing image
+      }
+    }
+    
+    // Update user data in Firestore
+    const userRef = doc(db, 'users', userId);
+    await updateDoc(userRef, filteredUpdateData);
+    
+    // Fetch updated user data
+    const userSnap = await getDoc(userRef);
+    const userData = userSnap.data() as UserData;
+    
+    // Return updated user data without destructuring password since it shouldn't be in profile data
+    return NextResponse.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: userId,
+          ...userData
+        }
+      },
+      timestamp: new Date().toISOString(),
+      requestId: generateRequestId()
+    });
+    
+  } catch (error: unknown) {
+    console.error('Profile update error:', error);
+    return NextResponse.json(
+      { message: `Internal server error: ${(error as Error).message || 'Update failed'}` },
+      { status: 500 }
+    );
+  }
+}

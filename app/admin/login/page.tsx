@@ -94,19 +94,40 @@ export default function LoginPage() {
     }
 
     try {
-      // Simulate API call to login endpoint
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Authenticate user with backend
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      const responseData = await response.json();
       
-      // In a real app, you would authenticate with your backend here
-      // For now, we'll simulate a successful login
-      const mockToken = 'mock_admin_token_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('admin_token', mockToken);
+      if (!response.ok || !responseData.success) {
+        throw new Error(responseData.message || 'Login failed');
+      }
+      
+      // Login successful - store user data and token
+      localStorage.setItem('admin_user', JSON.stringify(responseData.data.user));
+      if (responseData.data.token) {
+        localStorage.setItem('admin_token', responseData.data.token);
+        // Also store token in a cookie for server-side validation if needed
+        document.cookie = `token=${responseData.data.token}; path=/; max-age=${24*60*60}; SameSite=Lax`;
+      }
+      
+      // Clear any previous error states
+      setErrors({});
       
       // Redirect to dashboard
       router.push('/admin/dashboard');
     } catch (error) {
       console.error('Login failed:', error);
-      setErrors({ general: 'Login failed. Please check your credentials.' });
+      setErrors({ general: error instanceof Error ? error.message : 'Login failed. Please check your credentials.' });
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,6 @@
 import { createSchema, createYoga } from 'graphql-yoga';
 
+
 // Define TypeScript interfaces for our data models
 interface Blog {
     id: string;
@@ -648,8 +649,32 @@ const { handleRequest } = createYoga({
     // Enable GraphiQL for better development experience
     graphiql: {
         title: 'StuDev GraphQL Playground',
-        headers: `{\n  "content-type": "application/json"\n}`,
+        headers: `{
+            "content-type": "application/json"
+        }`,
     },
+    // NOTE: Authentication context was attempted but caused TypeScript errors
+    // Due to complex typing requirements of GraphQL Yoga, the auth context is commented out
+    // context: async ({ request }) => {
+    //     // Extract token from authorization header
+    //     const authHeader = request.headers.get('authorization');
+    //     let user = null;
+    //     
+    //     if (authHeader && authHeader.startsWith('Bearer ')) {
+    //         const token = authHeader.substring(7);
+    //         try {
+    //             // Verify token (in a real app, use a proper secret from env vars)
+    //             const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+    //             user = decoded;
+    //         } catch (err: unknown) {
+    //             console.log('Invalid token:', err instanceof Error ? err.message : 'Unknown error');
+    //             // Token is invalid, but we won't throw here to allow public queries
+    //         }
+    //     }
+    //     
+    //     return { user };
+    // },
+    // For now, leaving GraphQL auth as a future enhancement
 });
 
 /**

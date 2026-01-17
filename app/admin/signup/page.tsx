@@ -59,42 +59,75 @@ export default function SignupPage() {
     setIsLoading(true);
     setErrors({});
 
+    // Comprehensive sanitization of form data
+    const sanitizedFormData = {
+      firstName: formData.firstName
+        .trim()
+        .replace(/[<>"'&]/g, '') // Remove HTML/SQL injection characters
+        .replace(/[^a-zA-Z\s'-]/g, ''), // Allow only letters, spaces, hyphens, apostrophes
+      lastName: formData.lastName
+        .trim()
+        .replace(/[<>"'&]/g, '') // Remove HTML/SQL injection characters
+        .replace(/[^a-zA-Z\s'-]/g, ''), // Allow only letters, spaces, hyphens, apostrophes
+      email: formData.email
+        .trim()
+        .toLowerCase() // Normalize email
+        .replace(/[<>"'&]/g, ''), // Remove HTML/SQL injection characters
+      position: formData.position
+        .trim()
+        .replace(/[<>"'&]/g, '') // Remove HTML/SQL injection characters
+        .replace(/[^a-zA-Z0-9\s]/g, ''), // Allow only alphanumeric and spaces
+      phoneNumber: formData.phoneNumber 
+        ? formData.phoneNumber
+            .trim()
+            .replace(/[^0-9+\-\s()]/g, '') // Allow only phone number characters
+        : '',
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+      agreeToTerms: formData.agreeToTerms
+    };
+    
     // Validation
     const newErrors: FormErrors = {};
     
-    if (!formData.firstName) {
-      newErrors.firstName = 'First name is required';
+    if (!sanitizedFormData.firstName || sanitizedFormData.firstName.length < 2) {
+      newErrors.firstName = 'First name must be at least 2 characters';
     }
     
-    if (!formData.lastName) {
-      newErrors.lastName = 'Last name is required';
+    if (!sanitizedFormData.lastName || sanitizedFormData.lastName.length < 2) {
+      newErrors.lastName = 'Last name must be at least 2 characters';
     }
     
-    if (!formData.email) {
+    if (!sanitizedFormData.email) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(sanitizedFormData.email)) {
       newErrors.email = 'Email is invalid';
     }
     
-    if (!formData.position) {
+    if (!sanitizedFormData.position) {
       newErrors.position = 'Position is required';
     }
     
-    if (!formData.agreeToTerms) {
+    if (!sanitizedFormData.agreeToTerms) {
       newErrors.general = 'You must agree to the terms and conditions';
     }
     
-    if (!formData.password) {
+    if (!sanitizedFormData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (sanitizedFormData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(sanitizedFormData.password)) {
+      newErrors.password = 'Password must contain uppercase, lowercase, number & special character';
     }
     
-    if (!formData.confirmPassword) {
+    if (!sanitizedFormData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
+    } else if (sanitizedFormData.password !== sanitizedFormData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
+    
+    // Update form data with sanitized values
+    setFormData(sanitizedFormData);
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -103,18 +136,48 @@ export default function SignupPage() {
     }
 
     try {
-      // Simulate API call to register user
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Register user with backend
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          position: formData.position,
+          phoneNumber: formData.phoneNumber
+        }),
+      });
+
+      const responseData = await response.json();
       
-      // In a real app, you would register with your backend here
-      // For now, we'll simulate a successful registration
-      // Note: We're not storing a token or redirecting to dashboard
+      if (!response.ok || (responseData.success === false)) {
+        // Handle specific error cases based on status code and message
+        if (response.status === 409 || (responseData.message && responseData.message.toLowerCase().includes('already exists'))) {
+          setErrors({ email: responseData.message || 'Email already exists' });
+        } else {
+          setErrors({ general: responseData.message || 'Registration failed' });
+        }
+        setIsLoading(false);
+        return;
+      }
       
-      // Show success message and hide the form
+      // Registration successful
       setShowSuccessMessage(true);
+      // Store token if provided
+      if (responseData.token) {
+        localStorage.setItem('admin_token', responseData.token);
+      }
+      // Redirect to login page after 3 seconds
+      setTimeout(() => {
+        router.push('/admin/login');
+      }, 3000);
     } catch (error) {
       console.error('Registration failed:', error);
-      setErrors({ general: 'Registration failed. Please try again.' });
+      setErrors({ general: error instanceof Error ? error.message : 'Registration failed. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -146,11 +209,22 @@ export default function SignupPage() {
                 </button>
               </Link>
               
-              <div className="text-sm text-gray-500 mt-4">
+              <div className="text-sm text-gray-500 mt-4 space-y-2">
                 <p>Or return to{' '}
-                  <Link href="/" className="font-medium text-indigo-600 hover:text-indigo-500">
+                  <button 
+                    onClick={() => router.push('/')} 
+                    className="font-medium text-indigo-600 hover:text-indigo-500 underline focus:outline-none"
+                  >
                     Homepage
-                  </Link>
+                  </button>
+                </p>
+                <p>
+                  <button 
+                    onClick={() => router.push('/admin/login')} 
+                    className="font-medium text-indigo-600 hover:text-indigo-500 underline focus:outline-none"
+                  >
+                    Back to Login
+                  </button>
                 </p>
               </div>
             </div>

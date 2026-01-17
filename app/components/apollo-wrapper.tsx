@@ -1,6 +1,6 @@
 "use client";
 
-import { ApolloClient, InMemoryCache, HttpLink, from } from "@apollo/client";
+import { ApolloClient, InMemoryCache, HttpLink, from, ApolloLink } from "@apollo/client";
 import { onError } from "@apollo/client/link/error";
 import { ApolloProvider } from "@apollo/client/react";
 
@@ -22,6 +22,23 @@ const errorLink = onError((error) => {
     if (networkError) {
         console.error(`Network error: ${networkError}`);
     }
+});
+
+// Create authentication link to include JWT token
+const authLink = new ApolloLink((operation, forward) => {
+    // Get token from localStorage
+    const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
+    
+    // Add token to request headers
+    if (token) {
+        operation.setContext({
+            headers: {
+                authorization: `Bearer ${token}`,
+            }
+        });
+    }
+    
+    return forward(operation);
 });
 
 // Create HTTP link
@@ -73,7 +90,7 @@ const cache = new InMemoryCache({
 });
 
 const client = new ApolloClient({
-    link: from([errorLink, httpLink]), // Chain error link before HTTP link
+    link: from([errorLink, authLink, httpLink]), // Chain error link, auth link, then HTTP link
     cache,
     // Default options for all queries
     defaultOptions: {

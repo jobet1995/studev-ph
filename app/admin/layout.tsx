@@ -4,6 +4,19 @@ import { ReactNode, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
+interface UserData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  position: string;
+  role: string;
+  status: string;
+  createdAt: string;
+  lastLogin: string | null;
+  phoneNumber?: string;
+}
+
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -19,16 +32,30 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserData | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     const checkAuth = () => {
+      // Use a more reliable method to check authentication
       const token = localStorage.getItem('admin_token');
-      const isLoggedIn = !!token;
+      const user = localStorage.getItem('admin_user');
+      
+      const isLoggedIn = !!(token && user);
       
       // Update state
       setIsLoggedIn(isLoggedIn);
+      
+      // Set current user if logged in
+      if (user) {
+        try {
+          const parsedUser: UserData = JSON.parse(user);
+          setCurrentUser(parsedUser);
+        } catch (e) {
+          console.error('Error parsing user data:', e);
+        }
+      }
       
       // If we're not on a public page and not logged in, redirect to login
       if (!isLoggedIn && 
@@ -39,7 +66,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       }
     };
     
-    checkAuth();
+    // Add a small delay to ensure token is stored from login page
+    const timer = setTimeout(checkAuth, 50);
+    
+    return () => clearTimeout(timer);
   }, [router, pathname]);
 
   const handleLogout = () => {
@@ -257,11 +287,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         className="flex items-center space-x-2 focus:outline-none"
                       >
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">Admin User</p>
-                          <p className="text-xs text-gray-500 hidden sm:block">Administrator</p>
+                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[120px]">{currentUser ? currentUser.firstName || currentUser.lastName || currentUser.email.split('@')[0] : 'Admin User'}</p>
+                          <p className="text-xs text-gray-500 hidden sm:block">{currentUser?.role || 'Administrator'}</p>
                         </div>
                         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold text-white">
-                          AU
+                          {currentUser ? (currentUser.firstName?.charAt(0).toUpperCase() || currentUser.lastName?.charAt(0).toUpperCase() || currentUser.email?.charAt(0).toUpperCase()) : 'AU'}
                         </div>
                       </button>
                       

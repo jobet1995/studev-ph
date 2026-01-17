@@ -1,8 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useQuery } from '@apollo/client/react';
-import { gql } from '@apollo/client';
+import { useState, useEffect } from 'react';
 
 interface Activity {
   id: string;
@@ -98,69 +97,67 @@ interface GetDashboardDataQuery {
   dashboardStats: DashboardStats;
 }
 
-// GraphQL query to fetch dashboard data
-const GET_DASHBOARD_DATA = gql`
-  query GetDashboardData {
-    # Recent activities (could be from user actions)
-    recentActivity(limit: 5) {
-      id
-      title
-      type
-      timestamp
-      action
-    }
-    
-    # Upcoming events
-    upcomingEvents(limit: 4) {
-      id
-      title
-      date
-      location
-      eventType
-    }
-    
-    # Recent blogs
-    featuredBlogs(limit: 4) {
-      id
-      title
-      author
-      date
-      excerpt
-      imageUrl
-    }
-    
-    # Recent posts
-    posts(pagination: { page: 1, limit: 4 }) {
-      items {
-        id
-        title
-        content
-        author
-        createdAt
-        category
-      }
-      totalCount
-    }
-    
-    # Dashboard statistics
-    dashboardStats {
-      totalBlogs
-      publishedBlogs
-      totalEvents
-      totalUsers
-      totalPosts
-    }
-  }
-`;
-
 /**
  * Admin dashboard page component displaying summary statistics and recent activities
  * @returns {JSX.Element} The admin dashboard page
  */
 const DashboardPage = () => {
-  // Use GraphQL to fetch dashboard data
-  const { data, loading, error } = useQuery<GetDashboardDataQuery>(GET_DASHBOARD_DATA);
+  // Fetch dashboard data from Firebase (simulated with mock data)
+  const [data, setData] = useState<GetDashboardDataQuery | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
+  // Get user information from localStorage
+  const [user, setUser] = useState<{firstName?: string, lastName?: string, email?: string} | null>(null);
+  
+  useEffect(() => {
+    const storedUser = localStorage.getItem('admin_user');
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, []);
+  
+  useEffect(() => {
+    // Fetch data from Firebase backend
+    const fetchData = async () => {
+      try {
+        // Get auth token
+        const token = localStorage.getItem('admin_token');
+        
+        // Fetch dashboard data from API
+        const response = await fetch('/api/dashboard/data', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch dashboard data');
+        }
+        
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to fetch dashboard data');
+        }
+        
+        setData(result.data);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
+
   // Define type for stats
   type Stat = {
     id: number;
@@ -169,8 +166,8 @@ const DashboardPage = () => {
     change: string;
     changeType: 'positive' | 'negative' | 'neutral';
   };
-  
-  // Stats for the summary cards - derived from GraphQL data
+
+  // Stats for the summary cards - derived from mock data
   const stats: Stat[] = data ? [
     { id: 1, name: 'Total Blogs', value: data.dashboardStats.totalBlogs.toString(), change: '', changeType: 'neutral' as const },
     { id: 2, name: 'Published Blogs', value: data.dashboardStats.publishedBlogs.toString(), change: '', changeType: 'neutral' as const },
@@ -182,8 +179,8 @@ const DashboardPage = () => {
     { id: 3, name: 'Pending Tasks', value: '...', change: '', changeType: 'neutral' },
     { id: 4, name: 'Community Impact', value: '...', change: '', changeType: 'neutral' },
   ];
-  
-  // Activities derived from GraphQL data
+
+  // Activities derived from mock data
   const activities: Activity[] = data ? data.recentActivity.map((activity) => ({
     id: activity.id,
     user: activity.title,
@@ -192,19 +189,19 @@ const DashboardPage = () => {
     time: activity.timestamp,
     avatar: 'https://placehold.co/40x40?text=U' // Default avatar
   })) : [];
-  
-  // Events derived from GraphQL data
+
+  // Events derived from mock data
   const events: Event[] = data ? data.upcomingEvents.map((event) => ({
     id: event.id,
     title: event.title,
     date: event.date,
-    time: '', // No time in GraphQL schema, set as empty
+    time: '', // No time in mock data, set as empty
     location: event.location,
     eventType: event.eventType,
-    attendees: 0 // No attendees in GraphQL response, default to 0
+    attendees: 0 // No attendees in mock response, default to 0
   })) : [];
-  
-  // Pipeline derived from GraphQL data
+
+  // Pipeline derived from mock data
   const pipeline: PipelineItem[] = data ? data.posts.items.map((post, index) => ({
     id: post.id,
     title: post.title,
@@ -213,8 +210,8 @@ const DashboardPage = () => {
     owner: post.author,
     deadline: post.createdAt
   })) : [];
-  
-  // Engagements derived from GraphQL data
+
+  // Engagements derived from mock data
   const engagements: Engagement[] = data ? [
     {
       id: '1',
@@ -245,8 +242,8 @@ const DashboardPage = () => {
       change: 0
     }
   ] : [];
-  
-  // Featured blogs derived from GraphQL data
+
+  // Featured blogs derived from mock data
   const featuredBlogs: FeaturedBlog[] = data ? data.featuredBlogs.map(blog => ({
     id: blog.id,
     title: blog.title,
@@ -255,7 +252,6 @@ const DashboardPage = () => {
     excerpt: blog.excerpt,
     imageUrl: blog.imageUrl
   })) : [];
-
 
 
   if (loading) {
@@ -271,7 +267,7 @@ const DashboardPage = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-6 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-600">{error.message || 'An error occurred while loading dashboard data.'}</p>
+          <p className="text-gray-600">{error || 'An error occurred while loading dashboard data.'}</p>
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
@@ -288,7 +284,7 @@ const DashboardPage = () => {
       {/* Dashboard Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-2">Welcome back! Here&#39;s what&#39;s happening today.</p>
+        <p className="text-gray-600 mt-2">Welcome back, {user ? user.firstName || user.lastName || (user.email ? user.email.split('@')[0] : 'User') : 'User'}! Here&#39;s what&#39;s happening today.</p>
       </div>
 
       {/* Summary Cards */}
@@ -300,7 +296,7 @@ const DashboardPage = () => {
               <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
               {stat.change && (
                 <p className={`ml-2 text-sm font-medium ${stat.changeType === 'positive' ? 'text-green-600' : stat.changeType === 'negative' ? 'text-red-600' : 'text-gray-500'}`}>
-                  {stat.change}
+                    {stat.change}
                 </p>
               )}
             </div>

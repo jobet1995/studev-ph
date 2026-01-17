@@ -15,6 +15,7 @@ interface UserProfile {
   timezone?: string;
   language?: string;
   avatar?: string;
+  coverPhoto?: string;
   createdAt: string;
 }
 
@@ -28,6 +29,7 @@ interface FormData {
   timezone: string;
   language: string;
   avatar: File | null;
+  coverPhoto: File | null;
 }
 
 /**
@@ -40,43 +42,74 @@ const ProfilePage = () => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
 
-  
+  // Add state for image previews
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [coverPhotoPreview, setCoverPhotoPreview] = useState<string | null>(null);
+
   useEffect(() => {
-    // In a real application, fetch user profile data from an API
+    // Fetch user profile data from the API
     const fetchUserProfile = async () => {
       try {
         setLoading(true);
-          
-        // In a real application, this would be an API call to fetch user profile
-        // const response = await fetch('/api/user/profile');
-        // const userData = await response.json();
-          
-        // For demonstration purposes, we'll simulate a successful response
-        // but without hardcoded mock data
-        const userData = await new Promise<{[key: string]: unknown}>((resolve) => {
-          setTimeout(() => {
-            resolve({}); // Return an empty object or a partial response
-          }, 500);
+        
+        // Get token from localStorage
+        const token = localStorage.getItem('admin_token');
+        
+        if (!token) {
+          setError('Authentication token not found. Please log in again.');
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch user profile from API
+        const response = await fetch('/api/auth/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
         });
-          
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch profile');
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+          throw new Error(result.message || 'Failed to fetch profile');
+        }
+        
+        const userData = result.data.user;
+        
         // Process the received user data
+        // Check for profile picture in different possible fields
+        const profilePicture = userData.profilePicture || userData.avatar || userData.photoURL || '';
+        // Check for cover photo in different possible fields
+        const coverPhoto = userData.coverPhoto || userData.cover_image || userData.cover || '';
+        
         const processedProfile: UserProfile = {
-          id: (userData.id as string) || '',
-          firstName: (userData.firstName as string) || '',
-          lastName: (userData.lastName as string) || '',
-          email: (userData.email as string) || '',
-          position: (userData.position as string) || '',
-          role: (userData.role as string) || '',
-          bio: (userData.bio as string) || '',
-          timezone: (userData.timezone as string) || 'Asia/Manila',
-          language: (userData.language as string) || 'en',
-          avatar: (userData.avatar as string) || '',
-          createdAt: (userData.createdAt as string) || new Date().toISOString(),
+          id: userData.id || '',
+          firstName: userData.firstName || '',
+          lastName: userData.lastName || '',
+          email: userData.email || '',
+          position: userData.position || '',
+          role: userData.role || '',
+          bio: userData.bio || '',
+          timezone: userData.timezone || 'Asia/Manila',
+          language: userData.language || 'en',
+          avatar: profilePicture,
+          coverPhoto: coverPhoto,
+          createdAt: userData.createdAt || new Date().toISOString(),
         };
-          
+        
         setUserProfile(processedProfile);
+        
+        // Also update localStorage with fresh data
+        localStorage.setItem('admin_user', JSON.stringify(userData));
+        
         setLoading(false);
       } catch (err: unknown) {
         setError('Failed to load profile data');
@@ -84,11 +117,29 @@ const ProfilePage = () => {
         console.error('Error loading profile:', err);
       }
     };
-      
+    
     fetchUserProfile();
   }, []);
-  
+
   const [isEditing, setIsEditing] = useState(false);
+  
+  // Effect to populate form data when entering edit mode
+  useEffect(() => {
+    if (isEditing && userProfile) {
+      setFormData({
+        firstName: userProfile.firstName || '',
+        lastName: userProfile.lastName || '',
+        email: userProfile.email || '',
+        position: userProfile.position || '',
+        role: userProfile.role || '',
+        bio: userProfile.bio || '',
+        timezone: userProfile.timezone || 'Asia/Manila',
+        language: userProfile.language || 'en',
+        avatar: null, // Don't pre-populate with existing avatar file
+        coverPhoto: null // Don't pre-populate with existing cover photo file
+      });
+    }
+  }, [isEditing, userProfile]);
   const [formData, setFormData] = useState<FormData>(() => {
     // Initialize form data based on user profile if available
     if (userProfile) {
@@ -102,6 +153,7 @@ const ProfilePage = () => {
         timezone: userProfile.timezone || 'Asia/Manila',
         language: userProfile.language || 'en',
         avatar: null,
+        coverPhoto: null,
       };
     }
     return {
@@ -114,6 +166,7 @@ const ProfilePage = () => {
       timezone: 'Asia/Manila',
       language: 'en',
       avatar: null,
+      coverPhoto: null,
     };
   });
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
@@ -122,10 +175,22 @@ const ProfilePage = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'avatar' && e.target instanceof HTMLInputElement && e.target.files && e.target.files[0]) {
+    if ((name === 'avatar' || name === 'coverPhoto') && e.target instanceof HTMLInputElement && e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      
+      // Create preview URL for the new file
+      const previewUrl = URL.createObjectURL(file);
+      
+      // Set the appropriate preview state
+      if (name === 'avatar') {
+        setAvatarPreview(previewUrl);
+      } else if (name === 'coverPhoto') {
+        setCoverPhotoPreview(previewUrl);
+      }
+      
       setFormData({
         ...formData,
-        [name]: e.target.files[0]
+        [name]: file
       });
     } else {
       setFormData({
@@ -143,7 +208,7 @@ const ProfilePage = () => {
     }
   };
 
-  
+
   
   // Clean up object URLs when component unmounts
   useEffect(() => {
@@ -151,8 +216,19 @@ const ProfilePage = () => {
       if (userProfile && userProfile.avatar && userProfile.avatar.startsWith('blob:')) {
         URL.revokeObjectURL(userProfile.avatar);
       }
+      if (userProfile && userProfile.coverPhoto && userProfile.coverPhoto.startsWith('blob:')) {
+        URL.revokeObjectURL(userProfile.coverPhoto);
+      }
+      // Clean up preview URLs
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+      if (coverPhotoPreview) {
+        URL.revokeObjectURL(coverPhotoPreview);
+      }
     };
-  }, [userProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on unmount, not on state changes
 
   // Validate form
   const validateForm = (): boolean => {
@@ -194,34 +270,88 @@ const ProfilePage = () => {
       setError('User profile not loaded');
       return;
     }
-    
+
     try {
-      // In a real app, this would be an API call to update the profile
-      console.log('Updating profile:', formData);
+      // Get token from localStorage
+      const token = localStorage.getItem('admin_token');
       
-      // Update the user profile
-      const newAvatarUrl = formData.avatar ? URL.createObjectURL(formData.avatar) : userProfile.avatar;
-      setUserProfile({
-        ...userProfile,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        position: formData.position,
-        role: formData.role,
-        bio: formData.bio,
-        timezone: formData.timezone,
-        language: formData.language,
-        avatar: newAvatarUrl
-      });
-      
-      // Clean up previous object URLs to prevent memory leaks
-      if (userProfile.avatar && userProfile.avatar.startsWith('blob:')) {
-        URL.revokeObjectURL(userProfile.avatar);
+      if (!token) {
+        throw new Error('Authentication token not found');
       }
       
+      // Create FormData object to handle file uploads
+      const formDataToSend = new FormData();
+      
+      // Add text fields
+      formDataToSend.append('firstName', formData.firstName);
+      formDataToSend.append('lastName', formData.lastName);
+      formDataToSend.append('email', formData.email);
+      formDataToSend.append('position', formData.position);
+      formDataToSend.append('role', formData.role);
+      formDataToSend.append('bio', formData.bio);
+      formDataToSend.append('timezone', formData.timezone);
+      formDataToSend.append('language', formData.language);
+      
+      // Add files if they exist
+      if (formData.avatar) {
+        formDataToSend.append('avatar', formData.avatar);
+      }
+      if (formData.coverPhoto) {
+        formDataToSend.append('coverPhoto', formData.coverPhoto);
+      }
+      
+      // Send update request to API
+      const response = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataToSend,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update profile');
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update profile');
+      }
+      
+      // Clean up preview URLs after successful upload since we'll be using the Firebase URLs
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+        setAvatarPreview(null);
+      }
+      if (coverPhotoPreview) {
+        URL.revokeObjectURL(coverPhotoPreview);
+        setCoverPhotoPreview(null);
+      }
+      
+      // Update the user profile with response data
+      const updatedUserData = result.data.user;
+      setUserProfile({
+        ...userProfile,
+        firstName: updatedUserData.firstName,
+        lastName: updatedUserData.lastName,
+        email: updatedUserData.email,
+        position: updatedUserData.position,
+        role: updatedUserData.role,
+        bio: updatedUserData.bio,
+        timezone: updatedUserData.timezone,
+        language: updatedUserData.language,
+        avatar: updatedUserData.profilePicture,
+        coverPhoto: updatedUserData.coverPhoto
+      });
+      
+      // Update user data in localStorage
+      localStorage.setItem('admin_user', JSON.stringify(updatedUserData));
+      
       setIsEditing(false);
-    } catch (_err) {
-      console.error('Error updating profile:', _err);
+    } catch (updateErr: unknown) {
+      console.error('Error updating profile:', updateErr);
       setError('Failed to update profile. Please try again.');
     }
   };
@@ -229,6 +359,17 @@ const ProfilePage = () => {
   // Handle cancel edit
   const handleCancel = () => {
     setIsEditing(false);
+    
+    // Clean up preview URLs
+    if (avatarPreview) {
+      URL.revokeObjectURL(avatarPreview);
+      setAvatarPreview(null);
+    }
+    if (coverPhotoPreview) {
+      URL.revokeObjectURL(coverPhotoPreview);
+      setCoverPhotoPreview(null);
+    }
+    
     if (userProfile) {
       setFormData({
         firstName: userProfile.firstName || '',
@@ -239,7 +380,8 @@ const ProfilePage = () => {
         bio: userProfile.bio || '',
         timezone: userProfile.timezone || 'Asia/Manila',
         language: userProfile.language || 'en',
-        avatar: null
+        avatar: null,
+        coverPhoto: null
       });
     }
   };
@@ -448,7 +590,7 @@ const ProfilePage = () => {
                   {formErrors.role && (
                     <p className="mt-2 text-sm text-red-600 flex items-center">
                       <svg className="h-4 w-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 01-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                       </svg>
                       {formErrors.role}
                     </p>
@@ -460,7 +602,7 @@ const ProfilePage = () => {
                   <div className="flex items-center mb-6">
                     <div className="mr-6">
                       <Image
-                        src={formData.avatar ? URL.createObjectURL(formData.avatar) : userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
+                        src={avatarPreview || userProfile?.avatar || 'https://placehold.co/150x150?text=Profile'}
                         alt="Profile Preview"
                         width={150}
                         height={150}
@@ -484,6 +626,54 @@ const ProfilePage = () => {
                       <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
                     </div>
                   </div>
+                  
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 mt-6 pb-2 border-b border-gray-200">Cover Photo</h3>
+                  <div className="mb-6">
+                    <div className="mb-4">
+                      {coverPhotoPreview ? (
+                        <div className="w-full h-48 relative rounded-lg overflow-hidden">
+                          <Image
+                            src={coverPhotoPreview}
+                            alt="Cover Preview"
+                            fill
+                            sizes="100vw"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : userProfile?.coverPhoto ? (
+                        <div className="w-full h-48 relative rounded-lg overflow-hidden">
+                          <Image
+                            src={userProfile.coverPhoto}
+                            alt="Current Cover Photo"
+                            fill
+                            sizes="100vw"
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full h-48 bg-gray-200 rounded-lg border border-dashed border-gray-400 flex items-center justify-center text-gray-500">
+                          No cover photo uploaded
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <input
+                        type="file"
+                        id="coverPhoto"
+                        name="coverPhoto"
+                        accept="image/*"
+                        onChange={handleChange}
+                        className="text-sm text-gray-600
+                          file:mr-4 file:py-2.5 file:px-4
+                          file:rounded-lg file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-indigo-50 file:text-indigo-700
+                          hover:file:bg-indigo-100 transition-colors duration-200"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                  </div>
+                  
                   <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
                     Bio
                   </label>
@@ -653,31 +843,50 @@ const ProfilePage = () => {
                     </div>
                   </div>
                 </div>
-                
-                <div className="space-y-4">
+              </div>
+              
+              {userProfile?.coverPhoto && (
+                <div className="mb-10">
                   <div className="p-4 bg-gray-50 rounded-lg">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Preferences</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Timezone:</span>
-                        <span className="text-gray-900 font-medium">
-                          {userProfile?.timezone === 'Asia/Manila' && '(GMT+08:00) Philippines Time'}
-                          {userProfile?.timezone === 'UTC' && '(GMT+00:00) UTC'}
-                          {userProfile?.timezone === 'America/New_York' && '(GMT-05:00) Eastern Time'}
-                          {userProfile?.timezone === 'Asia/Tokyo' && '(GMT+09:00) Japan Standard Time'}
-                          {!userProfile?.timezone && 'Not set'}
-                        </span>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Cover Photo</h3>
+                    <div className="h-48 rounded-lg overflow-hidden">
+                      <div className="w-full h-full relative">
+                        <Image
+                          src={userProfile.coverPhoto}
+                          alt="Cover Photo"
+                          fill
+                          sizes="100vw"
+                          className="object-cover"
+                        />
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Language:</span>
-                        <span className="text-gray-900 font-medium">
-                          {userProfile?.language === 'en' && 'English'}
-                          {userProfile?.language === 'tl' && 'Tagalog'}
-                          {userProfile?.language === 'zh' && 'Chinese'}
-                          {userProfile?.language === 'hil' && 'Hiligaynon'}
-                          {!userProfile?.language && 'Not set'}
-                        </span>
-                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Preferences</h3>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Timezone:</span>
+                      <span className="text-gray-900 font-medium">
+                        {userProfile?.timezone === 'Asia/Manila' && '(GMT+08:00) Philippines Time'}
+                        {userProfile?.timezone === 'UTC' && '(GMT+00:00) UTC'}
+                        {userProfile?.timezone === 'America/New_York' && '(GMT-05:00) Eastern Time'}
+                        {userProfile?.timezone === 'Asia/Tokyo' && '(GMT+09:00) Japan Standard Time'}
+                        {!userProfile?.timezone && 'Not set'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Language:</span>
+                      <span className="text-gray-900 font-medium">
+                        {userProfile?.language === 'en' && 'English'}
+                        {userProfile?.language === 'tl' && 'Tagalog'}
+                        {userProfile?.language === 'zh' && 'Chinese'}
+                        {userProfile?.language === 'hil' && 'Hiligaynon'}
+                        {!userProfile?.language && 'Not set'}
+                      </span>
                     </div>
                   </div>
                 </div>
