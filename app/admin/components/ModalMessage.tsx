@@ -131,10 +131,10 @@ export default function ModalMessage({
                 {icon}
               </div>
               <div className="ml-3 w-0 flex-1 pt-0.5">
-                <h3 className={`text-lg font-medium ${textColor}`}>
+                <h3 className={`text-lg font-medium ${textColor} text-black`}>
                   {title}
                 </h3>
-                <div className={`mt-2 text-sm ${textColor}`}>
+                <div className={`mt-2 text-sm ${textColor} text-black`}>
                   <p>{message}</p>
                 </div>
               </div>

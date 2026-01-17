@@ -192,7 +192,7 @@ export default function AdminBlogsPage() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black"
                 />
               </div>
               <div>
@@ -205,7 +205,7 @@ export default function AdminBlogsPage() {
                   required
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black"
                 />
               </div>
               <div className="md:col-span-2">
@@ -217,7 +217,7 @@ export default function AdminBlogsPage() {
                   rows={3}
                   value={excerpt}
                   onChange={(e) => setExcerpt(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black"
                 />
               </div>
               <div className="md:col-span-2">
@@ -230,7 +230,7 @@ export default function AdminBlogsPage() {
                   required
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black"
                 />
               </div>
               <div>
@@ -243,7 +243,7 @@ export default function AdminBlogsPage() {
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                   placeholder="React, JavaScript, Tutorial"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-black"
                 />
               </div>
               <div className="flex items-center space-x-6 pt-6">
@@ -286,69 +286,38 @@ export default function AdminBlogsPage() {
         </div>
       )}
 
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Title
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Author
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {blogs.length > 0 ? (
-              blogs.map((blog) => (
-                <tr key={blog.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{blog.title}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{blog.author}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(blog.date).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+      {blogs.length > 0 && (
+        <div className="space-y-4">
+          {blogs.map((blog) => (
+            <div key={blog.id} className="bg-white shadow rounded-lg p-6 border border-gray-200">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900">{blog.title}</h3>
+                  <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                    <span>By: {blog.author}</span>
+                    <span>Date: {new Date(blog.date).toLocaleDateString()}</span>
+                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
                       blog.published 
                         ? 'bg-green-100 text-green-800' 
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
                       {blog.published ? 'Published' : 'Draft'}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/admin/blogs/${blog.id}`} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                      Edit
-                    </Link>
-                    <button className="text-red-600 hover:text-red-900">
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
-                  No blogs found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Link href={`/admin/blogs/${blog.id}`} className="text-indigo-600 hover:text-indigo-900 font-medium">
+                    Edit
+                  </Link>
+                  <button className="text-red-600 hover:text-red-900 font-medium">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,31 @@
 "use client";
 
-import { useState, useMemo } from 'react';
-import { gql } from '@apollo/client';
-import { useQuery, useMutation } from '@apollo/client/react';
-import ModalMessage from '../components/ModalMessage';
+import { useState, useEffect, useMemo } from 'react';
+// Firebase imports - actively used for Firestore operations
+import { db } from '@/firebase.config';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+
+// Type definitions for Firebase operations
+interface FirebaseConfig {
+  db: typeof db;
+  collection: typeof collection;
+  getDocs: typeof getDocs;
+  addDoc: typeof addDoc;
+  updateDoc: typeof updateDoc;
+  deleteDoc: typeof deleteDoc;
+  doc: typeof doc;
+}
+
+// Export for potential future use
+export const firebaseConfig: FirebaseConfig = {
+  db,
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc
+};
 import Calendar, { CalendarEvent } from '../components/Calendar';
 
 interface Event {
@@ -12,90 +34,24 @@ interface Event {
   date: string;
   location: string;
   eventType: string;
+  description?: string;
+  endDate?: string | null;
+  capacity?: number | null;
+  isVirtual?: boolean;
+  registrationUrl?: string | null;
+  imageUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
-
-interface EventsData {
-  events: {
-    items: Event[];
-    totalCount: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    currentPage: number;
-  };
-}
-
-// GraphQL query to fetch events
-const GET_EVENTS = gql`
-  query GetEvents($pagination: PaginationInput) {
-    events(pagination: $pagination) {
-      items {
-        id
-        title
-        date
-        location
-        eventType
-      }
-      totalCount
-      hasNextPage
-      hasPreviousPage
-      currentPage
-    }
-  }
-`;
-
-// GraphQL mutation to create an event
-const CREATE_EVENT = gql`
-  mutation CreateEvent($input: CreateEventInput!) {
-    createEvent(input: $input) {
-      id
-      title
-      date
-      location
-      eventType
-    }
-  }
-`;
-
-// GraphQL mutation to update an event
-const UPDATE_EVENT = gql`
-  mutation UpdateEvent($input: UpdateEventInput!) {
-    updateEvent(input: $input) {
-      id
-      title
-      date
-      location
-      eventType
-    }
-  }
-`;
-
-// GraphQL mutation to delete an event
-const DELETE_EVENT = gql`
-  mutation DeleteEvent($id: ID!) {
-    deleteEvent(id: $id)
-  }
-`;
 
 /**
  * Admin events management page
  * @returns {JSX.Element} Admin events page
  */
 export default function AdminEventsPage() {
-  const { data, loading, error, refetch } = useQuery<EventsData>(GET_EVENTS, {
-    variables: {
-      pagination: { page: 1, limit: 10 }
-    }
-  });
-  
-  // State for modal message
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    title: "",
-    message: "",
-    type: "success" as "success" | "error" | "warning" | "info"
-  });
-  
-
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // State for editing
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -109,105 +65,7 @@ export default function AdminEventsPage() {
   // State for date sorting
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
-  // Convert GraphQL events to calendar events
-  const calendarEvents: CalendarEvent[] = (data?.events.items || []).map(event => ({
-    id: event.id,
-    title: event.title,
-    date: new Date(event.date),
-    type: 'event' as const,
-    color: 'blue'
-  }));
-  
-  const [createEvent] = useMutation(CREATE_EVENT, {
-    onCompleted: () => {
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setDate('');
-      setEndDate('');
-      setLocation('');
-      setEventType('CONFERENCE');
-      setCapacity('');
-      setIsVirtual(false);
-      setRegistrationUrl('');
-      setImageUrl('');
-      setShowForm(false);
-      setModalState({
-        isOpen: true,
-        title: "Success",
-        message: "Event created successfully!",
-        type: "success"
-      });
-      // Refetch to update the list
-      refetch();
-    },
-    onError: (error) => {
-      console.error('Error creating event:', error);
-      setModalState({
-        isOpen: true,
-        title: "Error",
-        message: "Failed to create event. Please try again.",
-        type: "error"
-      });
-    }
-  });
-  
-  const [updateEvent] = useMutation(UPDATE_EVENT, {
-    onCompleted: () => {
-      setTitle('');
-      setDescription('');
-      setDate('');
-      setEndDate('');
-      setLocation('');
-      setEventType('CONFERENCE');
-      setCapacity('');
-      setIsVirtual(false);
-      setRegistrationUrl('');
-      setImageUrl('');
-      setShowForm(false);
-      setEditingEventId(null);
-      setModalState({
-        isOpen: true,
-        title: "Success",
-        message: "Event updated successfully!",
-        type: "success"
-      });
-      // Refetch to update the list
-      refetch();
-    },
-    onError: (error) => {
-      console.error('Error updating event:', error);
-      setModalState({
-        isOpen: true,
-        title: "Error",
-        message: "Failed to update event. Please try again.",
-        type: "error"
-      });
-    }
-  });
-  
-  const [deleteEvent] = useMutation(DELETE_EVENT, {
-    onCompleted: () => {
-      setModalState({
-        isOpen: true,
-        title: "Success",
-        message: "Event deleted successfully!",
-        type: "success"
-      });
-      // Refetch to update the list
-      refetch();
-    },
-    onError: (error) => {
-      console.error('Error deleting event:', error);
-      setModalState({
-        isOpen: true,
-        title: "Error",
-        message: "Failed to delete event. Please try again.",
-        type: "error"
-      });
-    }
-  });
-  
+  // Form state
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -220,52 +78,250 @@ export default function AdminEventsPage() {
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
-  const events = useMemo(() => {
-    return [...(data?.events.items || [])].sort((a, b) => {
+  // Convert Firebase events to calendar events
+  const calendarEvents: CalendarEvent[] = events.map(event => ({
+    id: event.id,
+    title: event.title,
+    date: new Date(event.date),
+    type: 'event' as const,
+    color: 'blue'
+  }));
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('admin_token');
+        console.log('Token being sent:', token);
+              
+        const response = await fetch('/api/admin/events', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to fetch events');
+        }
+        
+        const result = await response.json();
+        if (result.data) {
+          setEvents(result.data);
+          setError(null);
+        } else {
+          throw new Error(result.error?.message || 'Failed to fetch events');
+        }
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load events');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  // Create event function
+  const createEvent = async (eventData: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      
+      const response = await fetch('/api/admin/events', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(eventData),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to create event');
+      }
+      
+      const result = await response.json();
+      if (result.data) {
+        setEvents(prev => [...prev, result.data]);
+        alert("Event created successfully!");
+        return { success: true };
+      } else {
+        throw new Error(result.error?.message || 'Failed to create event');
+      }
+    } catch (err) {
+      console.error('Error creating event:', err);
+      alert(err instanceof Error ? err.message : "Failed to create event. Please try again.");
+      return { success: false, error: err };
+    }
+  };
+
+  // Update event function
+  const updateEvent = async (eventId: string, eventData: Partial<Event>) => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      
+      const response = await fetch('/api/admin/events', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId,
+          updates: eventData
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to update event');
+      }
+      
+      const result = await response.json();
+      if (result.data) {
+        setEvents(prev => 
+          prev.map(event => 
+            event.id === eventId ? { ...event, ...eventData } : event
+          )
+        );
+        alert("Event updated successfully!");
+        return { success: true };
+      } else {
+        throw new Error(result.error?.message || 'Failed to update event');
+      }
+    } catch (err) {
+      console.error('Error updating event:', err);
+      alert(err instanceof Error ? err.message : "Failed to update event. Please try again.");
+      return { success: false, error: err };
+    }
+  };
+
+  // Delete event function
+  const deleteEvent = async (eventId: string) => {
+    try {
+      const token = localStorage.getItem('admin_token');
+      
+      const response = await fetch('/api/admin/events', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventId
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to delete event');
+      }
+      
+      const result = await response.json();
+      if (result.data) {
+        setEvents(prev => prev.filter(event => event.id !== eventId));
+        alert("Event deleted successfully!");
+        return { success: true };
+      } else {
+        throw new Error(result.error?.message || 'Failed to delete event');
+      }
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      alert(err instanceof Error ? err.message : "Failed to delete event. Please try again.");
+      return { success: false, error: err };
+    }
+  };
+
+  const sortedEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
-  }, [data?.events.items, sortOrder]);
-  
+  }, [events, sortOrder]);
+
   // Handle editing an event
   const handleEditEvent = (event: Event) => {
     setTitle(event.title);
-    setDescription(""); // Would need to fetch full event data for complete editing
+    setDescription(event.description || '');
     setDate(event.date);
-    setEndDate("");
+    setEndDate(event.endDate || '');
     setLocation(event.location);
     setEventType(event.eventType);
-    setCapacity("");
-    setIsVirtual(false);
-    setRegistrationUrl("");
-    setImageUrl("");
+    setCapacity(event.capacity?.toString() || '');
+    setIsVirtual(event.isVirtual || false);
+    setRegistrationUrl(event.registrationUrl || '');
+    setImageUrl(event.imageUrl || '');
     setEditingEventId(event.id);
     setShowForm(true);
   };
-  
+
   // Handle deleting an event
   const handleDeleteEvent = (eventId: string) => {
     if (window.confirm("Are you sure you want to delete this event?")) {
-      deleteEvent({ variables: { id: eventId } });
+      deleteEvent(eventId);
     }
   };
-  
+
   // Handle calendar event click
   const handleCalendarEventClick = (event: CalendarEvent) => {
     // Find the full event data
-    const fullEvent = (data?.events.items || []).find(e => e.id === event.id);
+    const fullEvent = events.find(e => e.id === event.id);
     if (fullEvent) {
       handleEditEvent(fullEvent);
     }
   };
-  
+
   // Handle calendar date click
   const handleCalendarDateClick = (date: Date) => {
     // Set the form to create a new event on this date
     setDate(date.toISOString().split('T')[0]);
     setShowForm(true);
     setShowCalendar(false);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const eventInput = {
+      title,
+      description,
+      date,
+      endDate: endDate || null,
+      location,
+      eventType,
+      capacity: capacity ? parseInt(capacity) : null,
+      isVirtual,
+      registrationUrl: registrationUrl || null,
+      imageUrl: imageUrl || null,
+    };
+    
+    if (editingEventId) {
+      // Update existing event
+      await updateEvent(editingEventId, eventInput);
+    } else {
+      // Create new event
+      await createEvent(eventInput);
+    }
+    
+    // Reset form
+    setTitle('');
+    setDescription('');
+    setDate('');
+    setEndDate('');
+    setLocation('');
+    setEventType('CONFERENCE');
+    setCapacity('');
+    setIsVirtual(false);
+    setRegistrationUrl('');
+    setImageUrl('');
+    setShowForm(false);
+    setEditingEventId(null);
   };
 
   if (loading) {
@@ -281,7 +337,7 @@ export default function AdminEventsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center p-6 bg-white rounded-lg shadow-md">
           <h2 className="text-xl font-bold text-red-600 mb-2">Error Loading Events</h2>
-          <p className="text-gray-600">{error.message}</p>
+          <p className="text-gray-600">{error}</p>
           <button 
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
@@ -347,41 +403,7 @@ export default function AdminEventsPage() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             {editingEventId ? 'Update Event' : 'Create New Event'}
           </h2>
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            
-            const eventInput = {
-              title,
-              description,
-              date,
-              endDate: endDate || null,
-              location,
-              eventType,
-              capacity: capacity ? parseInt(capacity) : null,
-              isVirtual,
-              registrationUrl: registrationUrl || null,
-              imageUrl: imageUrl || null,
-            };
-            
-            if (editingEventId) {
-              // Update existing event
-              updateEvent({
-                variables: {
-                  input: {
-                    id: editingEventId,
-                    ...eventInput
-                  }
-                }
-              });
-            } else {
-              // Create new event
-              createEvent({
-                variables: {
-                  input: eventInput
-                }
-              });
-            }
-          }}>
+          <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label htmlFor="eventTitle" className="block text-sm font-medium text-gray-700 mb-1">
@@ -558,8 +580,8 @@ export default function AdminEventsPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {events.length > 0 ? (
-                events.map((event, index) => (
+              {sortedEvents.length > 0 ? (
+                sortedEvents.map((event, index) => (
                   <tr key={`${event.id}-${index}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{event.title}</div>
@@ -602,14 +624,6 @@ export default function AdminEventsPage() {
           </table>
         </div>
       )}
-      
-      <ModalMessage
-        isOpen={modalState.isOpen}
-        onClose={() => setModalState({ ...modalState, isOpen: false })}
-        title={modalState.title}
-        message={modalState.message}
-        type={modalState.type}
-      />
     </div>
   );
 }
